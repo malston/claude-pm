@@ -233,7 +233,7 @@ Claude Code installs plugins in two different ways, which affects how they're st
 
 ### The Plugin Path Bug
 
-There's a **known bug in the Claude CLI** that affects local plugins:
+There's a **known bug in the Claude CLI** that affects local plugins (see [Issue #11278](https://github.com/anthropics/claude-code/issues/11278) and [Issue #12457](https://github.com/anthropics/claude-code/issues/12457)):
 
 **The Problem:**
 1. Claude CLI sets `isLocal: true` for marketplace plugins
