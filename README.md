@@ -6,12 +6,12 @@ A comprehensive CLI tool for managing Claude Code plugins, marketplaces, and MCP
 
 `claude-pm` provides visibility into and control over your Claude Code installation, including:
 
-- Installed plugins and their state
+- Installed plugins and their state (enable/disable individual plugins)
 - Marketplace repositories
-- MCP server configuration
+- MCP server configuration (granular control over individual MCP servers)
 - Plugin updates and maintenance
 
-This tool is designed to replace and improve upon the existing bash scripts in `~/.claude/scripts/` with a more robust, cross-platform solution.
+This is a community-built tool that provides a unified interface for managing Claude Code plugins and MCP servers.
 
 ## Installation
 
@@ -44,11 +44,19 @@ claude-pm status
 # List all installed plugins
 claude-pm plugins list
 
+# Enable/disable plugins
+claude-pm disable compound-engineering@every-marketplace
+claude-pm enable compound-engineering@every-marketplace
+
 # List installed marketplaces
 claude-pm marketplaces
 
 # List MCP servers by plugin
 claude-pm mcp list
+
+# Enable/disable specific MCP servers
+claude-pm mcp disable superpowers-chrome@superpowers-marketplace:chrome
+claude-pm mcp enable superpowers-chrome@superpowers-marketplace:chrome
 ```
 
 ### Commands
@@ -114,7 +122,74 @@ claude-pm mcp list
 
 Shows command, arguments, and environment variables for each MCP server.
 
+#### Enable/Disable Plugins
+
+Enable or disable individual plugins:
+
+```bash
+# Disable a plugin
+claude-pm disable hookify@claude-code-plugins
+
+# Re-enable a plugin
+claude-pm enable hookify@claude-code-plugins
+```
+
+When you disable a plugin:
+- It's removed from `installed_plugins.json`
+- Its metadata is saved to `~/.claude-pm/config.json`
+- All commands, agents, skills, and MCP servers become unavailable
+
+When you re-enable it:
+- The metadata is restored from config
+- The plugin becomes available again immediately
+- No need to reinstall
+
+#### Enable/Disable MCP Servers
+
+Control individual MCP servers without disabling the entire plugin:
+
+```bash
+# Disable a specific MCP server
+claude-pm mcp disable compound-engineering@every-marketplace:playwright
+
+# Re-enable it
+claude-pm mcp enable compound-engineering@every-marketplace:playwright
+```
+
+This is useful for:
+- Reducing MCP context usage
+- Disabling heavy servers (like Playwright) when not needed
+- Keeping plugin features (commands, skills) while removing MCP tools
+
+**Note:** MCP server changes require restarting Claude Code to take effect.
+
 ## Configuration
+
+### Global Config File
+
+`claude-pm` stores its configuration in `~/.claude-pm/config.json`:
+
+```json
+{
+  "disabledPlugins": {
+    "hookify@claude-code-plugins": {
+      "version": "1.0.0",
+      "installPath": "/Users/you/.claude/plugins/...",
+      ...
+    }
+  },
+  "disabledMcpServers": [
+    "compound-engineering@every-marketplace:playwright"
+  ],
+  "claudeDir": "/Users/you/.claude",
+  "preferences": {
+    "autoUpdate": false,
+    "verboseOutput": false
+  }
+}
+```
+
+The config file is created automatically on first use.
 
 ### Global Flags
 
@@ -134,13 +209,13 @@ claude-pm --claude-dir /custom/path status
 - ✅ `claude-pm marketplaces` - List marketplaces
 - ✅ `claude-pm mcp list` - List MCP servers
 
-### Phase 2: Enable/Disable Control (Next)
+### Phase 2: Enable/Disable Control ✅ (Complete)
 
-- `claude-pm enable <plugin>` - Enable a plugin
-- `claude-pm disable <plugin>` - Disable a plugin
-- `claude-pm mcp disable <plugin>:<server>` - Disable specific MCP server
-- `claude-pm mcp enable <plugin>:<server>` - Re-enable MCP server
-- Global config file for tracking disabled MCP servers
+- ✅ `claude-pm enable <plugin>` - Enable a plugin
+- ✅ `claude-pm disable <plugin>` - Disable a plugin
+- ✅ `claude-pm mcp disable <plugin>:<server>` - Disable specific MCP server
+- ✅ `claude-pm mcp enable <plugin>:<server>` - Re-enable MCP server
+- ✅ Global config file for tracking disabled plugins and MCP servers
 
 ### Phase 3: Update & Maintenance
 
