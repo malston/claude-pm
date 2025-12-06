@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/malston/claude-pm/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,7 @@ func init() {
 	defaultClaudeDir := filepath.Join(homeDir, ".claude")
 
 	rootCmd.PersistentFlags().StringVar(&claudeDir, "claude-dir", defaultClaudeDir, "Claude installation directory")
+	rootCmd.PersistentFlags().BoolVarP(&config.YesFlag, "yes", "y", false, "Skip all prompts, use defaults")
 }
 
 func initConfig() {
