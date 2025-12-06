@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.1'
+
+    - name: Run unit tests
+      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./internal/...
+
+    - name: Run e2e tests
+      run: go test -v ./test/e2e/...
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.txt
+        flags: unittests
+        fail_ci_if_error: false
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.1'
+
+    - name: Build binary
+      run: |
+        go build -v -o bin/claude-pm ./cmd/claude-pm
+        ./bin/claude-pm --version || echo "Version command not implemented yet"
+
+    - name: Test binary runs
+      run: |
+        ./bin/claude-pm --help
