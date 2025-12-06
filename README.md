@@ -18,7 +18,7 @@ This is a community-built tool that provides a unified interface for managing Cl
 ### From Source
 
 ```bash
-go install github.com/malston/claude-pm@latest
+go install github.com/malston/claude-pm/cmd/claude-pm@latest
 ```
 
 ### From GitHub Releases
@@ -163,6 +163,38 @@ This is useful for:
 
 **Note:** MCP server changes require restarting Claude Code to take effect.
 
+#### Maintenance & Diagnostics
+
+Diagnose and fix common issues with your Claude installation:
+
+```bash
+# Run comprehensive diagnostics
+claude-pm doctor
+
+# Fix known plugin path issues
+claude-pm fix-paths
+
+# Clean up stale plugin entries
+claude-pm cleanup --dry-run    # See what would be removed
+claude-pm cleanup               # Actually remove stale entries
+```
+
+**Doctor Command:**
+- Checks all marketplaces exist
+- Identifies fixable path issues (missing subdirectories)
+- Identifies truly missing plugins
+- Provides specific fix recommendations
+
+**Fix-Paths Command:**
+- Automatically corrects known path issues
+- Handles marketplace subdirectory problems
+- No reinstall needed
+
+**Cleanup Command:**
+- Removes plugin entries where directories don't exist
+- `--dry-run` flag to preview changes
+- `--reinstall` flag to show reinstall commands
+
 ## Configuration
 
 ### Global Config File
@@ -217,12 +249,12 @@ claude-pm --claude-dir /custom/path status
 - ✅ `claude-pm mcp enable <plugin>:<server>` - Re-enable MCP server
 - ✅ Global config file for tracking disabled plugins and MCP servers
 
-### Phase 3: Update & Maintenance
+### Phase 3: Maintenance & Diagnostics ✅ (Complete)
 
-- `claude-pm update` - Update marketplaces and plugins
-- `claude-pm cleanup` - Clean stale plugins
-- `claude-pm fix-paths` - Fix plugin path issues
-- `claude-pm doctor` - Diagnose common issues
+- ✅ `claude-pm doctor` - Diagnose common issues
+- ✅ `claude-pm fix-paths` - Fix plugin path issues automatically
+- ✅ `claude-pm cleanup` - Clean stale plugin entries
+- `claude-pm update` - Update marketplaces and plugins (planned)
 
 ### Phase 4: Project-Level Config & Polish
 
