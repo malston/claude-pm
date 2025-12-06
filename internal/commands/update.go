@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/malston/claude-pm/internal/claude"
+	"github.com/malston/claude-pm/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -65,11 +66,11 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	fmt.Println("━━━ Checking Marketplaces ━━━")
 	marketplaceUpdates := checkMarketplaceUpdates(marketplaces)
 
-	hasMarketplaceUpdates := false
+	var outdatedMarketplaces []string
 	for _, update := range marketplaceUpdates {
 		if update.HasUpdate {
 			fmt.Printf("  ⚠ %s: Update available\n", update.Name)
-			hasMarketplaceUpdates = true
+			outdatedMarketplaces = append(outdatedMarketplaces, update.Name)
 		} else {
 			fmt.Printf("  ✓ %s: Up to date\n", update.Name)
 		}
@@ -79,81 +80,92 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	fmt.Println("\n━━━ Checking Plugins ━━━")
 	pluginUpdates := checkPluginUpdates(plugins, marketplaces)
 
-	hasPluginUpdates := false
+	var outdatedPlugins []string
 	for _, update := range pluginUpdates {
 		if update.HasUpdate {
 			fmt.Printf("  ⚠ %s: Update available\n", update.Name)
-			hasPluginUpdates = true
+			outdatedPlugins = append(outdatedPlugins, update.Name)
 		}
 	}
 
-	if !hasPluginUpdates {
+	if len(outdatedPlugins) == 0 {
 		fmt.Println("  ✓ All plugins up to date")
 	}
 
 	// Summary
 	fmt.Println("\n━━━ Summary ━━━")
-	if !hasMarketplaceUpdates && !hasPluginUpdates {
+	if len(outdatedMarketplaces) == 0 && len(outdatedPlugins) == 0 {
 		fmt.Println("✓ Everything is up to date!")
 		return nil
 	}
 
-	if hasMarketplaceUpdates {
-		fmt.Println("\nMarketplace updates available:")
-		for _, update := range marketplaceUpdates {
-			if update.HasUpdate {
-				fmt.Printf("  • %s\n", update.Name)
-			}
-		}
-	}
-
-	if hasPluginUpdates {
-		fmt.Println("\nPlugin updates available:")
-		for _, update := range pluginUpdates {
-			if update.HasUpdate {
-				fmt.Printf("  • %s\n", update.Name)
-			}
-		}
-	}
-
 	if updateCheckOnly {
+		if len(outdatedMarketplaces) > 0 {
+			fmt.Println("\nMarketplace updates available:")
+			for _, name := range outdatedMarketplaces {
+				fmt.Printf("  • %s\n", name)
+			}
+		}
+		if len(outdatedPlugins) > 0 {
+			fmt.Println("\nPlugin updates available:")
+			for _, name := range outdatedPlugins {
+				fmt.Printf("  • %s\n", name)
+			}
+		}
 		fmt.Println("\nRun without --check-only to apply updates")
 		return nil
 	}
 
-	// Prompt to update
-	fmt.Print("\nApply updates? [y/N]: ")
-	var response string
-	fmt.Scanln(&response)
-	if response != "y" && response != "Y" {
-		fmt.Println("Cancelled")
+	// Interactive selection for marketplaces
+	if len(outdatedMarketplaces) > 0 {
+		selectedMarketplaces, err := ui.SelectFromList(
+			"\nMarketplaces with updates available:",
+			outdatedMarketplaces,
+		)
+		if err != nil {
+			return err
+		}
+		outdatedMarketplaces = selectedMarketplaces
+	}
+
+	// Interactive selection for plugins
+	if len(outdatedPlugins) > 0 {
+		selectedPlugins, err := ui.SelectFromList(
+			"\nPlugins with updates available:",
+			outdatedPlugins,
+		)
+		if err != nil {
+			return err
+		}
+		outdatedPlugins = selectedPlugins
+	}
+
+	// Check if user selected anything
+	if len(outdatedMarketplaces) == 0 && len(outdatedPlugins) == 0 {
+		fmt.Println("No updates selected")
 		return nil
 	}
 
 	// Apply marketplace updates
-	if hasMarketplaceUpdates {
+	if len(outdatedMarketplaces) > 0 {
 		fmt.Println("\n━━━ Updating Marketplaces ━━━")
-		for _, update := range marketplaceUpdates {
-			if update.HasUpdate {
-				if err := updateMarketplace(update.Name, marketplaces[update.Name].InstallLocation); err != nil {
-					fmt.Printf("  ✗ %s: %v\n", update.Name, err)
-				} else {
-					fmt.Printf("  ✓ %s: Updated\n", update.Name)
-				}
+		for _, name := range outdatedMarketplaces {
+			if err := updateMarketplace(name, marketplaces[name].InstallLocation); err != nil {
+				fmt.Printf("  ✗ %s: %v\n", name, err)
+			} else {
+				fmt.Printf("  ✓ %s: Updated\n", name)
 			}
 		}
 	}
 
 	// Apply plugin updates
-	if hasPluginUpdates {
+	if len(outdatedPlugins) > 0 {
 		fmt.Println("\n━━━ Updating Plugins ━━━")
-		for _, update := range pluginUpdates {
-			if update.HasUpdate {
-				if err := updatePlugin(update.Name, plugins); err != nil {
-					fmt.Printf("  ✗ %s: %v\n", update.Name, err)
-				} else {
-					fmt.Printf("  ✓ %s: Updated\n", update.Name)
-				}
+		for _, name := range outdatedPlugins {
+			if err := updatePlugin(name, plugins); err != nil {
+				fmt.Printf("  ✗ %s: %v\n", name, err)
+			} else {
+				fmt.Printf("  ✓ %s: Updated\n", name)
 			}
 		}
 
