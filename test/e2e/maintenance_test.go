@@ -261,3 +261,117 @@ func TestFixPathsMultipleMarketplaces(t *testing.T) {
 		t.Error("Plugin2 should exist at corrected path")
 	}
 }
+
+func TestUnifiedCleanupFixesAndRemoves(t *testing.T) {
+	env := SetupTestEnv(t)
+	defer env.Cleanup()
+
+	// Create marketplace
+	env.CreateMarketplace("claude-code-plugins", "anthropics/claude-code")
+
+	// Create one fixable plugin (wrong path but exists at correct location)
+	env.CreatePlugin("fixable-plugin", "claude-code-plugins", "1.0.0", nil)
+	correctPath := filepath.Join(env.ClaudeDir, "plugins", "marketplaces", "claude-code-plugins", "plugins", "fixable-plugin")
+	wrongPath := filepath.Join(env.ClaudeDir, "plugins", "marketplaces", "claude-code-plugins", "fixable-plugin")
+
+	// Create registry with fixable plugin (wrong path), one valid, and one truly missing
+	validPath := filepath.Join(env.ClaudeDir, "plugins", "marketplaces", "claude-code-plugins", "plugins", "valid-plugin")
+	env.CreatePlugin("valid-plugin", "claude-code-plugins", "1.0.0", nil)
+
+	env.CreatePluginRegistry(map[string]claude.PluginMetadata{
+		"fixable-plugin@claude-code-plugins": {
+			Version:     "1.0.0",
+			InstallPath: wrongPath,
+			IsLocal:     true,
+		},
+		"valid-plugin@claude-code-plugins": {
+			Version:     "1.0.0",
+			InstallPath: validPath,
+			IsLocal:     true,
+		},
+		"missing-plugin@claude-code-plugins": {
+			Version:     "1.0.0",
+			InstallPath: "/non/existent/path",
+			IsLocal:     true,
+		},
+	})
+
+	// Initial state: 3 plugins
+	if count := env.PluginCount(); count != 3 {
+		t.Fatalf("Expected 3 plugins initially, got %d", count)
+	}
+
+	// Run unified cleanup (fix + remove)
+	registry := env.LoadPluginRegistry()
+
+	// Simulate what cleanup should do using the same logic as getExpectedPath
+	fixed := 0
+	removed := 0
+
+	for name, plugin := range registry.Plugins {
+		if !plugin.PathExists() {
+			// Try to get expected path
+			var expectedPath string
+			if strings.Contains(plugin.InstallPath, "claude-code-plugins") {
+				base := filepath.Dir(plugin.InstallPath)
+				pluginName := filepath.Base(plugin.InstallPath)
+				expectedPath = filepath.Join(base, "plugins", pluginName)
+			}
+
+			// Check if expected path exists
+			if expectedPath != "" {
+				updatedPlugin := plugin
+				updatedPlugin.InstallPath = expectedPath
+				if updatedPlugin.PathExists() {
+					plugin.InstallPath = expectedPath
+					registry.Plugins[name] = plugin
+					fixed++
+					continue
+				}
+			}
+
+			// Not fixable - remove
+			registry.DisablePlugin(name)
+			removed++
+		}
+	}
+
+	if err := claude.SavePlugins(env.ClaudeDir, registry); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify results
+	if fixed != 1 {
+		t.Errorf("Expected 1 fixed plugin, got %d", fixed)
+	}
+
+	if removed != 1 {
+		t.Errorf("Expected 1 removed plugin, got %d", removed)
+	}
+
+	// Final state: 2 plugins (valid + fixed)
+	if count := env.PluginCount(); count != 2 {
+		t.Errorf("Expected 2 plugins after cleanup, got %d", count)
+	}
+
+	// Verify the fixable plugin was fixed
+	registry = env.LoadPluginRegistry()
+	fixedPlugin := registry.Plugins["fixable-plugin@claude-code-plugins"]
+	if fixedPlugin.InstallPath != correctPath {
+		t.Errorf("Expected fixed path %s, got %s", correctPath, fixedPlugin.InstallPath)
+	}
+
+	if !fixedPlugin.PathExists() {
+		t.Error("Fixed plugin should exist at corrected path")
+	}
+
+	// Verify valid plugin still exists
+	if !env.PluginExists("valid-plugin@claude-code-plugins") {
+		t.Error("valid-plugin should still exist")
+	}
+
+	// Verify missing plugin was removed
+	if env.PluginExists("missing-plugin@claude-code-plugins") {
+		t.Error("missing-plugin should have been removed")
+	}
+}

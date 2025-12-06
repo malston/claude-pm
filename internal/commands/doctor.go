@@ -84,18 +84,23 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 				fmt.Printf("      Current:  %s\n", issue.InstallPath)
 				fmt.Printf("      Expected: %s\n", issue.ExpectedPath)
 			}
-			fmt.Println("\n  → Run 'claude-pm fix-paths' to automatically fix these")
 		}
 
 		// Report truly missing plugins
 		if missing, ok := byType["not_found"]; ok {
-			fmt.Printf("\n  ✗ %d plugins with missing directories:\n", len(missing))
+			if len(byType["missing_subdirectory"]) > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("  ✗ %d plugins with missing directories:\n", len(missing))
 			for _, issue := range missing {
 				fmt.Printf("    - %s\n", issue.PluginName)
 				fmt.Printf("      Path: %s\n", issue.InstallPath)
 			}
-			fmt.Println("\n  → Run 'claude-pm cleanup' to remove these entries")
 		}
+
+		// Unified recommendation
+		fmt.Println("\n  → Run 'claude-pm cleanup' to fix and remove these issues")
+		fmt.Println("     (use --fix-only or --remove-only for granular control)")
 	}
 	fmt.Println()
 

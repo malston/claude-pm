@@ -70,6 +70,7 @@ claude-pm status
 ```
 
 Example output:
+
 ```
 ╔════════════════════════════════════════╗
 ║           claude-pm Status             ║
@@ -106,6 +107,7 @@ claude-pm plugins --summary
 Shows version, status, installation path, and type (local/cached) for each plugin.
 
 **Plugin Types:**
+
 - **Cached:** Plugin copied to `~/.claude/plugins/cache/`
 - **Local:** Plugin referenced from marketplace directory
 
@@ -142,11 +144,13 @@ claude-pm enable hookify@claude-code-plugins
 ```
 
 When you disable a plugin:
+
 - It's removed from `installed_plugins.json`
 - Its metadata is saved to `~/.claude-pm/config.json`
 - All commands, agents, skills, and MCP servers become unavailable
 
 When you re-enable it:
+
 - The metadata is restored from config
 - The plugin becomes available again immediately
 - No need to reinstall
@@ -164,6 +168,7 @@ claude-pm mcp enable compound-engineering@every-marketplace:playwright
 ```
 
 This is useful for:
+
 - Reducing MCP context usage
 - Disabling heavy servers (like Playwright) when not needed
 - Keeping plugin features (commands, skills) while removing MCP tools
@@ -182,31 +187,33 @@ claude-pm update                # Apply updates
 # Run comprehensive diagnostics
 claude-pm doctor
 
-# Fix known plugin path issues
-claude-pm fix-paths
-
-# Clean up stale plugin entries
-claude-pm cleanup --dry-run    # See what would be removed
-claude-pm cleanup               # Actually remove stale entries
+# Fix and clean up plugin issues (default: fix + remove)
+claude-pm cleanup               # Fix paths and remove broken entries
+claude-pm cleanup --dry-run     # Preview changes
+claude-pm cleanup --fix-only    # Only fix paths, don't remove
+claude-pm cleanup --remove-only # Only remove broken entries
 ```
 
 **Doctor Command:**
+
 - Checks all marketplaces exist
 - Identifies fixable path issues (missing subdirectories)
 - Identifies truly missing plugins
-- Provides specific fix recommendations
-
-**Fix-Paths Command:**
-- Automatically corrects known path issues
-- Handles marketplace subdirectory problems
-- No reinstall needed
+- Recommends using `cleanup` to resolve issues
 
 **Cleanup Command:**
-- Removes plugin entries where directories don't exist
-- `--dry-run` flag to preview changes
-- `--reinstall` flag to show reinstall commands
+
+By default, fixes and removes plugin issues in one operation:
+
+- **Fixes** plugins with correctable path issues (missing subdirectories)
+- **Removes** plugin entries that are truly broken (no valid path exists)
+- `--fix-only` flag to only fix paths without removing entries
+- `--remove-only` flag to only remove broken entries without fixing
+- `--dry-run` flag to preview changes without applying them
+- `--reinstall` flag to show reinstall commands for removed plugins
 
 **Update Command:**
+
 - Checks marketplaces for git updates
 - Checks plugins for newer marketplace commits
 - `--check-only` flag to preview without applying
@@ -220,12 +227,14 @@ Claude Code installs plugins in two different ways, which affects how they're st
 ### Plugin Storage Types
 
 **Cached Plugins (`isLocal: false`)**
+
 - Plugin is **copied** to `~/.claude/plugins/cache/plugin-name`
 - Creates an independent copy separate from the marketplace
 - More stable - less prone to path issues
 - Example: Most superpowers-marketplace plugins
 
 **Local Plugins (`isLocal: true`)**
+
 - Plugin **references** the marketplace directory directly
 - Path: `~/.claude/plugins/marketplaces/marketplace-name/plugins/plugin-name`
 - No separate copy - points directly to marketplace
@@ -236,6 +245,7 @@ Claude Code installs plugins in two different ways, which affects how they're st
 There's a **known bug in the Claude CLI** that affects local plugins (see [Issue #11278](https://github.com/anthropics/claude-code/issues/11278) and [Issue #12457](https://github.com/anthropics/claude-code/issues/12457)):
 
 **The Problem:**
+
 1. Claude CLI sets `isLocal: true` for marketplace plugins
 2. BUT creates paths **without** the `/plugins/` subdirectory
 3. Results in broken paths like:
@@ -243,11 +253,13 @@ There's a **known bug in the Claude CLI** that affects local plugins (see [Issue
    - Right: `~/.claude/plugins/marketplaces/claude-code-plugins/plugins/hookify`
 
 **The Impact:**
+
 - Plugins appear in `installed_plugins.json` but paths don't exist
 - Shows as "stale" in `claude-pm status`
 - Plugin commands, skills, and MCP servers are unavailable
 
 **The Fix:**
+
 ```bash
 # Diagnose the issue
 claude-pm doctor
@@ -255,19 +267,21 @@ claude-pm doctor
 # See which plugins are affected
 claude-pm plugins --summary
 
-# Automatically fix the paths
-claude-pm fix-paths
+# Fix the paths (and optionally remove any truly broken entries)
+claude-pm cleanup
 ```
 
 ### Why the --summary Flag Exists
 
 The `--summary` flag was added to help you:
+
 1. **Identify affected plugins** - Local plugins are the ones with path bugs
 2. **Understand your installation** - See how Claude CLI installed your plugins
-3. **Track the fix** - Verify that `fix-paths` corrected the issues
+3. **Track the fix** - Verify that `cleanup` corrected the issues
 4. **Future troubleshooting** - Quickly check plugin type distribution
 
 **Example:**
+
 ```bash
 $ claude-pm plugins --summary
 
@@ -311,6 +325,7 @@ The config file is created automatically on first use.
 - `--claude-dir` - Override the Claude installation directory (default: `~/.claude`)
 
 Example:
+
 ```bash
 claude-pm --claude-dir /custom/path status
 ```
