@@ -50,12 +50,19 @@ var profileShowCmd = &cobra.Command{
 	RunE:  runProfileShow,
 }
 
+var profileSuggestCmd = &cobra.Command{
+	Use:   "suggest",
+	Short: "Suggest a profile based on current directory",
+	RunE:  runProfileSuggest,
+}
+
 func init() {
 	rootCmd.AddCommand(profileCmd)
 	profileCmd.AddCommand(profileListCmd)
 	profileCmd.AddCommand(profileUseCmd)
 	profileCmd.AddCommand(profileCreateCmd)
 	profileCmd.AddCommand(profileShowCmd)
+	profileCmd.AddCommand(profileSuggestCmd)
 }
 
 func runProfileList(cmd *cobra.Command, args []string) error {
@@ -290,4 +297,55 @@ func showDiff(diff *profile.Diff) {
 			fmt.Printf("    + MCP: %s%s\n", m.Name, secretInfo)
 		}
 	}
+}
+
+func runProfileSuggest(cmd *cobra.Command, args []string) error {
+	profilesDir := getProfilesDir()
+
+	// Get current directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Load all profiles
+	profiles, err := profile.List(profilesDir)
+	if err != nil {
+		return fmt.Errorf("failed to list profiles: %w", err)
+	}
+
+	if len(profiles) == 0 {
+		fmt.Println("No profiles available.")
+		fmt.Println("Create one with: claude-pm profile create <name>")
+		return nil
+	}
+
+	// Find matching profiles
+	suggested := profile.SuggestProfile(cwd, profiles)
+
+	if suggested == nil {
+		fmt.Println("No profile matches the current directory.")
+		fmt.Println()
+		fmt.Println("Available profiles:")
+		for _, p := range profiles {
+			fmt.Printf("  - %s\n", p.Name)
+		}
+		return nil
+	}
+
+	fmt.Printf("Suggested profile: %s\n", suggested.Name)
+	if suggested.Description != "" {
+		fmt.Printf("  %s\n", suggested.Description)
+	}
+	fmt.Println()
+
+	fmt.Print("Apply this profile? [Y/n]: ")
+	choice := promptChoice("", "y")
+	if choice == "y" || choice == "yes" || choice == "" {
+		// Run the use command
+		return runProfileUse(cmd, []string{suggested.Name})
+	}
+
+	fmt.Println("Cancelled.")
+	return nil
 }
