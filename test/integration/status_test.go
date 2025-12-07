@@ -1,6 +1,6 @@
-// ABOUTME: E2E tests for status and list commands
-// ABOUTME: Tests actual command execution with real file structures
-package e2e
+// ABOUTME: Integration tests for status and list commands
+// ABOUTME: Tests internal functions with file-based fixtures
+package integration
 
 import (
 	"path/filepath"

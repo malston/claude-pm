@@ -26,8 +26,8 @@ jobs:
     - name: Run unit tests
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./internal/...
 
-    - name: Run e2e tests
-      run: go test -v ./test/e2e/...
+    - name: Run integration tests
+      run: go test -v ./test/integration/...
 
     - name: Upload coverage
       uses: codecov/codecov-action@v4

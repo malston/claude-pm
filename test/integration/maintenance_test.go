@@ -1,6 +1,6 @@
-// ABOUTME: E2E tests for maintenance commands
+// ABOUTME: Integration tests for maintenance commands
 // ABOUTME: Tests doctor, fix-paths, and cleanup workflows
-package e2e
+package integration
 
 import (
 	"path/filepath"

@@ -28,8 +28,10 @@ type DisabledPlugin struct {
 
 // Preferences represents user preferences
 type Preferences struct {
-	AutoUpdate    bool `json:"autoUpdate"`
-	VerboseOutput bool `json:"verboseOutput"`
+	AutoUpdate    bool   `json:"autoUpdate"`
+	VerboseOutput bool   `json:"verboseOutput"`
+	ActiveProfile string `json:"activeProfile,omitempty"`
+	SecretBackend string `json:"secretBackend,omitempty"`
 }
 
 // DefaultConfig returns a new config with default values
