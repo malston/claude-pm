@@ -191,9 +191,37 @@ When `profile use` runs:
 
 1. Check for Claude CLI → install if missing
 2. Check for profiles dir → create with bundled default
-3. Apply selected profile
+3. **Detect existing installation** (see below)
+4. Apply selected profile
 
 Default profile is embedded in binary using Go's `embed` package.
+
+### Existing Installation Protection
+
+If `~/.claude` exists with plugins, MCP servers, or marketplaces configured, setup offers to preserve the current state as a profile before proceeding:
+
+```
+$ claude-pm setup
+
+Existing Claude Code installation detected:
+  → 3 MCP servers, 2 marketplaces, 8 plugins
+
+Options:
+  [s] Save current setup as a profile, then continue
+  [c] Continue anyway (will replace current setup)
+  [a] Abort
+
+Choice: s
+Profile name [current]: my-old-setup
+✓ Saved as 'my-old-setup'
+
+Proceeding with setup using profile: default
+...
+```
+
+This allows users to switch back with `claude-pm profile use my-old-setup`.
+
+With `--yes` flag: skips the prompt and continues without saving (for scripted installs where the user knows what they're doing).
 
 ## One-liner Install
 
