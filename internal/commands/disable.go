@@ -18,8 +18,8 @@ var disableCmd = &cobra.Command{
 The plugin's metadata is saved so it can be re-enabled later without reinstalling.
 
 Example:
-  claude-pm disable hookify@claude-code-plugins
-  claude-pm disable compound-engineering`,
+  claudeup disable hookify@claude-code-plugins
+  claudeup disable compound-engineering`,
 	Args: cobra.ExactArgs(1),
 	RunE: runDisable,
 }
@@ -80,7 +80,7 @@ func runDisable(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("✓ Disabled %s\n\n", pluginName)
 	fmt.Println("Plugin commands, agents, skills, and MCP servers are now unavailable")
-	fmt.Println("Run 'claude-pm enable", pluginName+"' to re-enable")
+	fmt.Println("Run 'claudeup enable", pluginName+"' to re-enable")
 
 	return nil
 }

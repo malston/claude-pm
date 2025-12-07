@@ -176,7 +176,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 
 	if fixed > 0 || removed > 0 {
-		fmt.Println("\nRun 'claude-pm status' to verify the changes")
+		fmt.Println("\nRun 'claudeup status' to verify the changes")
 	}
 
 	return nil

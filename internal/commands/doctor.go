@@ -107,7 +107,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 
 		// Unified recommendation
-		fmt.Println("\n  → Run 'claude-pm cleanup' to fix and remove these issues")
+		fmt.Println("\n  → Run 'claudeup cleanup' to fix and remove these issues")
 		fmt.Println("     (use --fix-only or --remove-only for granular control)")
 	}
 	fmt.Println()

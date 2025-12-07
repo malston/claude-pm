@@ -22,7 +22,7 @@ type TestEnv struct {
 func SetupTestEnv(t *testing.T) *TestEnv {
 	t.Helper()
 
-	tempDir, err := os.MkdirTemp("", "claude-pm-e2e-*")
+	tempDir, err := os.MkdirTemp("", "claudeup-e2e-*")
 	if err != nil {
 		t.Fatal(err)
 	}

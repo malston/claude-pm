@@ -1,4 +1,4 @@
-// ABOUTME: Entry point for the claude-pm CLI tool
+// ABOUTME: Entry point for the claudeup CLI tool
 // ABOUTME: Initializes and executes the root command
 package main
 
