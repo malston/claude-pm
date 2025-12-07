@@ -5,8 +5,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/malston/claude-pm/internal/claude"
-	"github.com/malston/claude-pm/internal/config"
+	"github.com/claudeup/claudeup/internal/claude"
+	"github.com/claudeup/claudeup/internal/config"
 	"github.com/spf13/cobra"
 )
 

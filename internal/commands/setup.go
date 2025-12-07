@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/malston/claude-pm/internal/config"
-	"github.com/malston/claude-pm/internal/profile"
-	"github.com/malston/claude-pm/internal/secrets"
+	"github.com/claudeup/claudeup/internal/config"
+	"github.com/claudeup/claudeup/internal/profile"
+	"github.com/claudeup/claudeup/internal/secrets"
 	"github.com/spf13/cobra"
 )
 

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/malston/claude-pm/internal/claude"
-	"github.com/malston/claude-pm/internal/config"
-	"github.com/malston/claude-pm/internal/mcp"
+	"github.com/claudeup/claudeup/internal/claude"
+	"github.com/claudeup/claudeup/internal/config"
+	"github.com/claudeup/claudeup/internal/mcp"
 	"github.com/spf13/cobra"
 )
 

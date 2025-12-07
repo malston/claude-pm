@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/malston/claude-pm/internal/commands"
+	"github.com/claudeup/claudeup/internal/commands"
 )
 
 var version = "dev" // Injected at build time via -ldflags

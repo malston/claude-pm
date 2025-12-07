@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/malston/claude-pm/internal/config"
+	"github.com/claudeup/claudeup/internal/config"
 	"github.com/spf13/cobra"
 )
 

@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/malston/claude-pm/internal/profile"
-	"github.com/malston/claude-pm/internal/sandbox"
-	"github.com/malston/claude-pm/internal/secrets"
+	"github.com/claudeup/claudeup/internal/profile"
+	"github.com/claudeup/claudeup/internal/sandbox"
+	"github.com/claudeup/claudeup/internal/secrets"
 	"github.com/spf13/cobra"
 )
 
