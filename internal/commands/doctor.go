@@ -35,16 +35,24 @@ type PathIssue struct {
 func runDoctor(cmd *cobra.Command, args []string) error {
 	fmt.Println("Running diagnostics...")
 
-	// Load plugins
+	// Load plugins (gracefully handle fresh installs with no plugins)
 	plugins, err := claude.LoadPlugins(claudeDir)
 	if err != nil {
-		return fmt.Errorf("failed to load plugins: %w", err)
+		if os.IsNotExist(err) {
+			plugins = &claude.PluginRegistry{Plugins: make(map[string]claude.PluginMetadata)}
+		} else {
+			return fmt.Errorf("failed to load plugins: %w", err)
+		}
 	}
 
-	// Load marketplaces
+	// Load marketplaces (gracefully handle fresh installs)
 	marketplaces, err := claude.LoadMarketplaces(claudeDir)
 	if err != nil {
-		return fmt.Errorf("failed to load marketplaces: %w", err)
+		if os.IsNotExist(err) {
+			marketplaces = make(claude.MarketplaceRegistry)
+		} else {
+			return fmt.Errorf("failed to load marketplaces: %w", err)
+		}
 	}
 
 	// Check marketplaces
