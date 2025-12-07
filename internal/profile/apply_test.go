@@ -142,6 +142,181 @@ func TestBuildMCPAddArgsDefaultScope(t *testing.T) {
 	}
 }
 
+func TestComputeDiffEmptyProfileRemovesEverything(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginsDir := filepath.Join(claudeDir, "plugins")
+	os.MkdirAll(pluginsDir, 0755)
+
+	// Current state: has plugins and MCP servers
+	currentPlugins := map[string]interface{}{
+		"version": 1,
+		"plugins": map[string]interface{}{
+			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
+			"plugin-b@marketplace": map[string]interface{}{"version": "1.0"},
+		},
+	}
+	claudeJSON := map[string]interface{}{
+		"mcpServers": map[string]interface{}{
+			"server-a": map[string]interface{}{"command": "cmd-a"},
+		},
+	}
+	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), currentPlugins)
+	writeTestJSON(t, filepath.Join(pluginsDir, "known_marketplaces.json"), map[string]interface{}{})
+	writeTestJSON(t, filepath.Join(tmpDir, ".claude.json"), claudeJSON)
+
+	// Empty profile - should remove everything
+	profile := &Profile{Name: "empty"}
+
+	diff, err := ComputeDiff(profile, claudeDir, filepath.Join(tmpDir, ".claude.json"))
+	if err != nil {
+		t.Fatalf("ComputeDiff failed: %v", err)
+	}
+
+	if len(diff.PluginsToRemove) != 2 {
+		t.Errorf("Expected 2 plugins to remove, got %d: %v", len(diff.PluginsToRemove), diff.PluginsToRemove)
+	}
+	if len(diff.MCPToRemove) != 1 {
+		t.Errorf("Expected 1 MCP server to remove, got %d: %v", len(diff.MCPToRemove), diff.MCPToRemove)
+	}
+	if len(diff.PluginsToInstall) != 0 {
+		t.Errorf("Expected no plugins to install, got: %v", diff.PluginsToInstall)
+	}
+	if len(diff.MCPToInstall) != 0 {
+		t.Errorf("Expected no MCP servers to install, got: %v", diff.MCPToInstall)
+	}
+}
+
+func TestComputeDiffFreshInstall(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	// Don't create any files - simulates fresh install
+
+	// Profile with content
+	profile := &Profile{
+		Name:    "full",
+		Plugins: []string{"plugin-a@marketplace", "plugin-b@marketplace"},
+		MCPServers: []MCPServer{
+			{Name: "server-a", Command: "cmd-a"},
+		},
+		Marketplaces: []Marketplace{
+			{Repo: "org/marketplace"},
+		},
+	}
+
+	diff, err := ComputeDiff(profile, claudeDir, filepath.Join(tmpDir, ".claude.json"))
+	if err != nil {
+		t.Fatalf("ComputeDiff failed: %v", err)
+	}
+
+	// Should install everything, remove nothing
+	if len(diff.PluginsToInstall) != 2 {
+		t.Errorf("Expected 2 plugins to install, got %d: %v", len(diff.PluginsToInstall), diff.PluginsToInstall)
+	}
+	if len(diff.MCPToInstall) != 1 {
+		t.Errorf("Expected 1 MCP server to install, got %d: %v", len(diff.MCPToInstall), diff.MCPToInstall)
+	}
+	if len(diff.MarketplacesToAdd) != 1 {
+		t.Errorf("Expected 1 marketplace to add, got %d: %v", len(diff.MarketplacesToAdd), diff.MarketplacesToAdd)
+	}
+	if len(diff.PluginsToRemove) != 0 {
+		t.Errorf("Expected no plugins to remove, got: %v", diff.PluginsToRemove)
+	}
+	if len(diff.MCPToRemove) != 0 {
+		t.Errorf("Expected no MCP servers to remove, got: %v", diff.MCPToRemove)
+	}
+}
+
+func TestComputeDiffIdenticalStates(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginsDir := filepath.Join(claudeDir, "plugins")
+	os.MkdirAll(pluginsDir, 0755)
+
+	// Current state matches profile exactly
+	currentPlugins := map[string]interface{}{
+		"version": 1,
+		"plugins": map[string]interface{}{
+			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
+		},
+	}
+	claudeJSON := map[string]interface{}{
+		"mcpServers": map[string]interface{}{
+			"server-a": map[string]interface{}{"command": "cmd-a"},
+		},
+	}
+	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), currentPlugins)
+	writeTestJSON(t, filepath.Join(pluginsDir, "known_marketplaces.json"), map[string]interface{}{})
+	writeTestJSON(t, filepath.Join(tmpDir, ".claude.json"), claudeJSON)
+
+	// Profile identical to current state
+	profile := &Profile{
+		Name:    "identical",
+		Plugins: []string{"plugin-a@marketplace"},
+		MCPServers: []MCPServer{
+			{Name: "server-a", Command: "cmd-a"},
+		},
+	}
+
+	diff, err := ComputeDiff(profile, claudeDir, filepath.Join(tmpDir, ".claude.json"))
+	if err != nil {
+		t.Fatalf("ComputeDiff failed: %v", err)
+	}
+
+	// Nothing should change
+	if len(diff.PluginsToRemove) != 0 {
+		t.Errorf("Expected no plugins to remove, got: %v", diff.PluginsToRemove)
+	}
+	if len(diff.PluginsToInstall) != 0 {
+		t.Errorf("Expected no plugins to install, got: %v", diff.PluginsToInstall)
+	}
+	if len(diff.MCPToRemove) != 0 {
+		t.Errorf("Expected no MCP servers to remove, got: %v", diff.MCPToRemove)
+	}
+	if len(diff.MCPToInstall) != 0 {
+		t.Errorf("Expected no MCP servers to install, got: %v", diff.MCPToInstall)
+	}
+}
+
+func TestComputeDiffMarketplacesOnlyAdd(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginsDir := filepath.Join(claudeDir, "plugins")
+	os.MkdirAll(pluginsDir, 0755)
+
+	// Current state has marketplace A
+	marketplaces := map[string]interface{}{
+		"marketplace-a": map[string]interface{}{
+			"source": map[string]interface{}{
+				"source": "github",
+				"repo":   "org/marketplace-a",
+			},
+		},
+	}
+	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), map[string]interface{}{"version": 1, "plugins": map[string]interface{}{}})
+	writeTestJSON(t, filepath.Join(pluginsDir, "known_marketplaces.json"), marketplaces)
+	writeTestJSON(t, filepath.Join(tmpDir, ".claude.json"), map[string]interface{}{})
+
+	// Profile only has marketplace B (not A) - but marketplaces are additive
+	profile := &Profile{
+		Name: "test",
+		Marketplaces: []Marketplace{
+			{Source: "github", Repo: "org/marketplace-b"},
+		},
+	}
+
+	diff, err := ComputeDiff(profile, claudeDir, filepath.Join(tmpDir, ".claude.json"))
+	if err != nil {
+		t.Fatalf("ComputeDiff failed: %v", err)
+	}
+
+	// Should add B, not remove A (marketplaces are additive only)
+	if len(diff.MarketplacesToAdd) != 1 || diff.MarketplacesToAdd[0].Repo != "org/marketplace-b" {
+		t.Errorf("Expected to add marketplace-b, got: %v", diff.MarketplacesToAdd)
+	}
+	// Verify no mechanism exists to remove marketplaces (by design)
+}
+
 func writeTestJSON(t *testing.T, path string, data interface{}) {
 	t.Helper()
 	bytes, err := json.MarshalIndent(data, "", "  ")
