@@ -1,6 +1,6 @@
-// ABOUTME: E2E tests for enable/disable commands
+// ABOUTME: Integration tests for enable/disable commands
 // ABOUTME: Tests plugin and MCP server enable/disable workflows
-package e2e
+package integration
 
 import (
 	"path/filepath"

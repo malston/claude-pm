@@ -1,6 +1,6 @@
-// ABOUTME: Integration tests for Apply flow
+// ABOUTME: Integration tests for profile Apply flow
 // ABOUTME: Uses mock executor to verify command sequences
-package profile
+package integration
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/malston/claude-pm/internal/profile"
 	"github.com/malston/claude-pm/internal/secrets"
 )
 
@@ -71,7 +72,7 @@ func TestApplyInstallsPlugins(t *testing.T) {
 
 	// Current state: no plugins
 	// Profile: wants plugin-a
-	profile := &Profile{
+	p := &profile.Profile{
 		Name:    "test",
 		Plugins: []string{"plugin-a@marketplace"},
 	}
@@ -79,7 +80,7 @@ func TestApplyInstallsPlugins(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestApplyRemovesPlugins(t *testing.T) {
 	})
 
 	// Profile: only wants plugin-a (should remove plugin-b)
-	profile := &Profile{
+	p := &profile.Profile{
 		Name:    "test",
 		Plugins: []string{"plugin-a@marketplace"},
 	}
@@ -114,7 +115,7 @@ func TestApplyRemovesPlugins(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -135,9 +136,9 @@ func TestApplyAddsMCPServers(t *testing.T) {
 	defer env.cleanup()
 
 	// Profile: wants an MCP server
-	profile := &Profile{
+	p := &profile.Profile{
 		Name: "test",
-		MCPServers: []MCPServer{
+		MCPServers: []profile.MCPServer{
 			{
 				Name:    "test-mcp",
 				Command: "npx",
@@ -150,7 +151,7 @@ func TestApplyAddsMCPServers(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -181,15 +182,15 @@ func TestApplyRemovesMCPServers(t *testing.T) {
 	})
 
 	// Profile: no MCP servers (should remove old-mcp)
-	profile := &Profile{
+	p := &profile.Profile{
 		Name:       "test",
-		MCPServers: []MCPServer{},
+		MCPServers: []profile.MCPServer{},
 	}
 
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -210,9 +211,9 @@ func TestApplyAddsMarketplaces(t *testing.T) {
 	defer env.cleanup()
 
 	// Profile: wants a marketplace
-	profile := &Profile{
+	p := &profile.Profile{
 		Name: "test",
-		Marketplaces: []Marketplace{
+		Marketplaces: []profile.Marketplace{
 			{Source: "github", Repo: "test-org/test-marketplace"},
 		},
 	}
@@ -220,7 +221,7 @@ func TestApplyAddsMarketplaces(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -245,17 +246,17 @@ func TestApplyWithSecrets(t *testing.T) {
 	defer os.Unsetenv("TEST_API_KEY")
 
 	// Profile: MCP server that needs a secret
-	profile := &Profile{
+	p := &profile.Profile{
 		Name: "test",
-		MCPServers: []MCPServer{
+		MCPServers: []profile.MCPServer{
 			{
 				Name:    "secret-mcp",
 				Command: "npx",
 				Args:    []string{"-y", "package", "$TEST_API_KEY"},
-				Secrets: map[string]SecretRef{
+				Secrets: map[string]profile.SecretRef{
 					"TEST_API_KEY": {
 						Description: "Test API key",
-						Sources: []SecretSource{
+						Sources: []profile.SecretSource{
 							{Type: "env", Key: "TEST_API_KEY"},
 						},
 					},
@@ -267,7 +268,7 @@ func TestApplyWithSecrets(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	result, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}
@@ -299,16 +300,16 @@ func TestApplyMissingSecretFails(t *testing.T) {
 
 	// DON'T set up the env var - secret should fail
 
-	profile := &Profile{
+	p := &profile.Profile{
 		Name: "test",
-		MCPServers: []MCPServer{
+		MCPServers: []profile.MCPServer{
 			{
 				Name:    "secret-mcp",
 				Command: "npx",
 				Args:    []string{"package", "$MISSING_SECRET"},
-				Secrets: map[string]SecretRef{
+				Secrets: map[string]profile.SecretRef{
 					"MISSING_SECRET": {
-						Sources: []SecretSource{
+						Sources: []profile.SecretSource{
 							{Type: "env", Key: "MISSING_SECRET"},
 						},
 					},
@@ -320,7 +321,7 @@ func TestApplyMissingSecretFails(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	_, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err == nil {
 		t.Error("Expected error for missing secret")
 	}
@@ -336,9 +337,9 @@ func TestApplyCommandOrder(t *testing.T) {
 	})
 
 	// Profile: different plugins and marketplaces
-	profile := &Profile{
+	p := &profile.Profile{
 		Name: "test",
-		Marketplaces: []Marketplace{
+		Marketplaces: []profile.Marketplace{
 			{Source: "github", Repo: "new-marketplace"},
 		},
 		Plugins: []string{"new-plugin@marketplace"},
@@ -347,7 +348,7 @@ func TestApplyCommandOrder(t *testing.T) {
 	executor := NewMockExecutor()
 	chain := secrets.NewChain(secrets.NewEnvResolver())
 
-	_, err := ApplyWithExecutor(profile, env.claudeDir, env.claudeJSON, chain, executor)
+	_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
 	if err != nil {
 		t.Fatalf("Apply failed: %v", err)
 	}

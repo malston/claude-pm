@@ -1,6 +1,6 @@
-// ABOUTME: E2E test helpers for setting up test fixtures
-// ABOUTME: Creates fake Claude installations for integration testing
-package e2e
+// ABOUTME: Integration test helpers for setting up test fixtures
+// ABOUTME: Creates fake Claude installations for testing
+package integration
 
 import (
 	"encoding/json"
