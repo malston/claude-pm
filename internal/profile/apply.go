@@ -12,6 +12,19 @@ import (
 	"github.com/malston/claude-pm/internal/secrets"
 )
 
+// CommandExecutor runs claude CLI commands
+type CommandExecutor interface {
+	Run(args ...string) error
+}
+
+// DefaultExecutor runs commands using the real claude CLI
+type DefaultExecutor struct{}
+
+// Run executes the claude CLI with the given arguments
+func (e *DefaultExecutor) Run(args ...string) error {
+	return runClaude(args...)
+}
+
 // ApplyResult contains the results of applying a profile
 type ApplyResult struct {
 	PluginsRemoved      []string
@@ -96,8 +109,13 @@ func ComputeDiff(profile *Profile, claudeDir, claudeJSONPath string) (*Diff, err
 	return diff, nil
 }
 
-// Apply executes the profile changes
+// Apply executes the profile changes using the default executor
 func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secrets.Chain) (*ApplyResult, error) {
+	return ApplyWithExecutor(profile, claudeDir, claudeJSONPath, secretChain, &DefaultExecutor{})
+}
+
+// ApplyWithExecutor executes the profile changes using the provided executor
+func ApplyWithExecutor(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secrets.Chain, executor CommandExecutor) (*ApplyResult, error) {
 	diff, err := ComputeDiff(profile, claudeDir, claudeJSONPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute diff: %w", err)
@@ -142,7 +160,7 @@ func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secr
 
 	// Remove plugins
 	for _, plugin := range diff.PluginsToRemove {
-		if err := runClaude("plugin", "uninstall", plugin); err != nil {
+		if err := executor.Run("plugin", "uninstall", plugin); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("failed to uninstall plugin %s: %w", plugin, err))
 		} else {
 			result.PluginsRemoved = append(result.PluginsRemoved, plugin)
@@ -151,7 +169,7 @@ func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secr
 
 	// Remove MCP servers
 	for _, mcp := range diff.MCPToRemove {
-		if err := runClaude("mcp", "remove", mcp); err != nil {
+		if err := executor.Run("mcp", "remove", mcp); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("failed to remove MCP server %s: %w", mcp, err))
 		} else {
 			result.MCPServersRemoved = append(result.MCPServersRemoved, mcp)
@@ -161,7 +179,7 @@ func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secr
 	// Add marketplaces
 	for _, m := range diff.MarketplacesToAdd {
 		if m.Repo != "" {
-			if err := runClaude("plugin", "marketplace", "add", m.Repo); err != nil {
+			if err := executor.Run("plugin", "marketplace", "add", m.Repo); err != nil {
 				result.Errors = append(result.Errors, fmt.Errorf("failed to add marketplace %s: %w", m.Repo, err))
 			} else {
 				result.MarketplacesAdded = append(result.MarketplacesAdded, m.Repo)
@@ -171,7 +189,7 @@ func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secr
 
 	// Install plugins
 	for _, plugin := range diff.PluginsToInstall {
-		if err := runClaude("plugin", "install", plugin); err != nil {
+		if err := executor.Run("plugin", "install", plugin); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("failed to install plugin %s: %w", plugin, err))
 		} else {
 			result.PluginsInstalled = append(result.PluginsInstalled, plugin)
@@ -181,7 +199,7 @@ func Apply(profile *Profile, claudeDir, claudeJSONPath string, secretChain *secr
 	// Install MCP servers
 	for _, mcp := range diff.MCPToInstall {
 		args := buildMCPAddArgs(mcp, resolvedMCP[mcp.Name])
-		if err := runClaude(args...); err != nil {
+		if err := executor.Run(args...); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("failed to add MCP server %s: %w", mcp.Name, err))
 		} else {
 			result.MCPServersInstalled = append(result.MCPServersInstalled, mcp.Name)
