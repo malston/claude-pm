@@ -45,15 +45,10 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Step 2: Ensure profiles directory exists
+	// Step 2: Ensure profiles directory and default profiles exist
 	profilesDir := getProfilesDir()
-	if err := os.MkdirAll(profilesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create profiles directory: %w", err)
-	}
-
-	// Step 3: Ensure default profile exists
-	if err := ensureDefaultProfile(profilesDir); err != nil {
-		return err
+	if err := profile.EnsureDefaultProfiles(profilesDir); err != nil {
+		return fmt.Errorf("failed to set up profiles: %w", err)
 	}
 
 	// Step 4: Check for existing installation
@@ -150,32 +145,6 @@ func getClaudeVersion() string {
 func getProfilesDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".claude-pm", "profiles")
-}
-
-func ensureDefaultProfile(profilesDir string) error {
-	defaultPath := filepath.Join(profilesDir, "default.json")
-	if _, err := os.Stat(defaultPath); err == nil {
-		return nil // Already exists
-	}
-
-	fmt.Println("Creating default profile...")
-
-	// Create a minimal default profile
-	p := &profile.Profile{
-		Name:        "default",
-		Description: "Base Claude Code setup with essential marketplaces",
-		Marketplaces: []profile.Marketplace{
-			{Source: "github", Repo: "anthropics/claude-code-plugins"},
-		},
-		Plugins: []string{},
-	}
-
-	if err := profile.Save(profilesDir, p); err != nil {
-		return fmt.Errorf("failed to create default profile: %w", err)
-	}
-
-	fmt.Println("  ✓ Created default profile")
-	return nil
 }
 
 func hasContent(p *profile.Profile) bool {

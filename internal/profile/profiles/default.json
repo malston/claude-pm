@@ -1,0 +1,10 @@
+{
+  "name": "default",
+  "description": "Base Claude Code setup with essential marketplaces and plugins",
+  "mcpServers": [],
+  "marketplaces": [
+    {"source": "github", "repo": "anthropics/claude-code-plugins"}
+  ],
+  "plugins": [],
+  "detect": {}
+}
