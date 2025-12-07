@@ -38,9 +38,12 @@ func SetVersion(version string) {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Global flags
-	homeDir, _ := os.UserHomeDir()
-	defaultClaudeDir := filepath.Join(homeDir, ".claude")
+	// Global flags - respect CLAUDE_CONFIG_DIR if set
+	defaultClaudeDir := os.Getenv("CLAUDE_CONFIG_DIR")
+	if defaultClaudeDir == "" {
+		homeDir, _ := os.UserHomeDir()
+		defaultClaudeDir = filepath.Join(homeDir, ".claude")
+	}
 
 	rootCmd.PersistentFlags().StringVar(&claudeDir, "claude-dir", defaultClaudeDir, "Claude installation directory")
 	rootCmd.PersistentFlags().BoolVarP(&config.YesFlag, "yes", "y", false, "Skip all prompts, use defaults")

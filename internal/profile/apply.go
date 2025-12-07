@@ -236,14 +236,23 @@ func runClaude(args ...string) error {
 	return cmd.Run()
 }
 
-// DefaultClaudeDir returns the default Claude configuration directory
+// DefaultClaudeDir returns the Claude configuration directory
+// Respects CLAUDE_CONFIG_DIR environment variable if set
 func DefaultClaudeDir() string {
+	if override := os.Getenv("CLAUDE_CONFIG_DIR"); override != "" {
+		return override
+	}
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".claude")
 }
 
-// DefaultClaudeJSONPath returns the default ~/.claude.json path
+// DefaultClaudeJSONPath returns the path to .claude.json
+// When CLAUDE_CONFIG_DIR is set, it's inside that directory
+// Otherwise it's at ~/.claude.json
 func DefaultClaudeJSONPath() string {
+	if override := os.Getenv("CLAUDE_CONFIG_DIR"); override != "" {
+		return filepath.Join(override, ".claude.json")
+	}
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".claude.json")
 }
