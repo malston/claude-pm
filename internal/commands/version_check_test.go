@@ -20,6 +20,12 @@ func TestParseVersion(t *testing.T) {
 		{"1.0", []int{1, 0}},
 		{"1", []int{1}},
 		{"", []int{}},
+		// Edge cases for invalid/unusual formats
+		{"abc", []int{}},
+		{"v", []int{}},
+		{"...", []int{}},
+		{"1.2.3.4.5", []int{1, 2, 3, 4, 5}},
+		{"0.0.0", []int{0, 0, 0}},
 	}
 
 	for _, tc := range tests {
@@ -68,6 +74,14 @@ func TestIsVersionOutdated(t *testing.T) {
 		{"v1.0.72", "1.0.80", true},
 		{"claude 1.0.72", "1.0.80", true},
 		{"1.0.81", "v1.0.80", false},
+
+		// Edge cases for invalid/unusual formats
+		{"", "1.0.80", true},           // Empty version is outdated
+		{"abc", "1.0.80", true},        // Non-numeric is outdated
+		{"unknown", "1.0.80", true},    // "unknown" version is outdated
+		{"1.0.80", "", false},          // Anything beats empty minimum
+		{"0.0.0", "0.0.1", true},       // Zero versions work
+		{"0.0.1", "0.0.0", false},      // Zero versions work
 	}
 
 	for _, tc := range tests {
