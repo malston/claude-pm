@@ -108,11 +108,23 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// Minimum Claude CLI version required for proper functionality
+// Versions before 1.0.80 have Ink raw mode issues when stdin is not properly connected
+const minClaudeVersion = "1.0.80"
+
 func ensureClaudeCLI() error {
 	fmt.Print("Checking for Claude CLI... ")
 
 	if _, err := exec.LookPath("claude"); err == nil {
 		version := getClaudeVersion()
+		if version != "unknown" && isVersionOutdated(version, minClaudeVersion) {
+			fmt.Printf("⚠ outdated (%s)\n", version)
+			fmt.Println()
+			fmt.Printf("Claude CLI version %s is installed, but version %s or newer is required.\n", version, minClaudeVersion)
+			fmt.Println("Older versions have known issues with terminal handling that cause setup to fail.")
+			fmt.Println()
+			return promptClaudeUpgrade(version)
+		}
 		fmt.Printf("✓ found (%s)\n", version)
 		return nil
 	}
@@ -143,6 +155,7 @@ func ensureClaudeCLI() error {
 	fmt.Println("Installing Claude CLI...")
 
 	cmd := exec.Command("bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash")
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -161,6 +174,96 @@ func getClaudeVersion() string {
 		return "unknown"
 	}
 	return strings.TrimSpace(strings.Split(string(output), "\n")[0])
+}
+
+// isVersionOutdated returns true if current version is older than minimum version
+// Uses simple string comparison of semver-like versions (e.g., "1.0.72" vs "1.0.80")
+func isVersionOutdated(current, minimum string) bool {
+	currentParts := parseVersion(current)
+	minimumParts := parseVersion(minimum)
+
+	for i := 0; i < len(minimumParts); i++ {
+		if i >= len(currentParts) {
+			return true // Current has fewer parts, treat as older
+		}
+		if currentParts[i] < minimumParts[i] {
+			return true
+		}
+		if currentParts[i] > minimumParts[i] {
+			return false
+		}
+	}
+	return false
+}
+
+// parseVersion extracts numeric parts from a version string
+// Handles formats like "1.0.72", "claude 1.0.72", "v1.0.72"
+func parseVersion(version string) []int {
+	// Remove common prefixes
+	version = strings.TrimPrefix(version, "v")
+	version = strings.TrimPrefix(version, "claude ")
+
+	parts := strings.Split(version, ".")
+	nums := make([]int, 0, len(parts))
+
+	for _, part := range parts {
+		// Extract numeric portion (handles cases like "72-beta")
+		numStr := ""
+		for _, c := range part {
+			if c >= '0' && c <= '9' {
+				numStr += string(c)
+			} else {
+				break
+			}
+		}
+		if numStr != "" {
+			var num int
+			fmt.Sscanf(numStr, "%d", &num)
+			nums = append(nums, num)
+		}
+	}
+	return nums
+}
+
+// promptClaudeUpgrade asks the user if they want to upgrade Claude CLI
+func promptClaudeUpgrade(currentVersion string) error {
+	if !config.YesFlag {
+		fmt.Println("Would you like to upgrade Claude CLI now using the official installer?")
+		fmt.Println()
+		fmt.Println("  ⚠️  Warning: This will download and execute code from the internet.")
+		fmt.Println("     Command: curl -fsSL https://claude.ai/install.sh | bash")
+		fmt.Println()
+		choice := promptChoice("Upgrade Claude CLI?", "y")
+		if strings.ToLower(choice) != "y" && strings.ToLower(choice) != "yes" {
+			fmt.Println()
+			fmt.Println("To upgrade manually, run:")
+			fmt.Println("  curl -fsSL https://claude.ai/install.sh | bash")
+			fmt.Println()
+			fmt.Println("Then run 'claudeup setup' again.")
+			return fmt.Errorf("Claude CLI version %s is outdated (minimum: %s)", currentVersion, minClaudeVersion)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("Upgrading Claude CLI...")
+
+	cmd := exec.Command("bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to upgrade Claude CLI: %w", err)
+	}
+
+	// Verify the upgrade succeeded
+	newVersion := getClaudeVersion()
+	if newVersion != "unknown" && isVersionOutdated(newVersion, minClaudeVersion) {
+		return fmt.Errorf("Claude CLI upgrade did not resolve version issue (still %s, need %s)", newVersion, minClaudeVersion)
+	}
+
+	fmt.Printf("  ✓ Claude CLI upgraded to %s\n", newVersion)
+	return nil
 }
 
 func getProfilesDir() string {
