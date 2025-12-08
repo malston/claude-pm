@@ -162,5 +162,28 @@ if [[ "$INSTALL_DIR" == "$HOME/.local/bin" ]]; then
     fi
 fi
 
+# For first-time installs, backup existing Claude configuration
+if [[ -z "$EXISTING_VERSION" && -d "$HOME/.claude" ]]; then
+    # Check if there's meaningful content to backup
+    HAS_CONTENT=false
+    if [[ -f "$HOME/.claude/settings.json" ]] || \
+       [[ -d "$HOME/.claude/plugins" ]] || \
+       [[ -f "$HOME/.claude/claude.json" ]]; then
+        HAS_CONTENT=true
+    fi
+
+    if [[ "$HAS_CONTENT" == true ]]; then
+        echo ""
+        echo "Detected existing Claude Code configuration."
+        echo "Creating backup profile 'my-previous-setup'..."
+        if "$INSTALL_DIR/$BINARY_NAME" profile create my-previous-setup 2>/dev/null; then
+            echo "✓ Saved current configuration as 'my-previous-setup'"
+            echo "  You can restore it anytime with: $BINARY_NAME profile use my-previous-setup"
+        else
+            echo "  (Could not create backup profile - you can do this manually with '$BINARY_NAME profile create')"
+        fi
+    fi
+fi
+
 echo ""
 echo "Run '$BINARY_NAME setup' to get started"
