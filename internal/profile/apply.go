@@ -33,12 +33,14 @@ func (e *DefaultExecutor) RunWithOutput(args ...string) (string, error) {
 
 // ApplyResult contains the results of applying a profile
 type ApplyResult struct {
-	PluginsRemoved      []string
-	PluginsInstalled    []string
-	MCPServersRemoved   []string
-	MCPServersInstalled []string
-	MarketplacesAdded   []string
-	Errors              []error
+	PluginsRemoved        []string
+	PluginsInstalled      []string
+	PluginsAlreadyRemoved []string // Plugins that were already uninstalled
+	PluginsAlreadyPresent []string // Plugins that were already installed
+	MCPServersRemoved     []string
+	MCPServersInstalled   []string
+	MarketplacesAdded     []string
+	Errors                []error
 }
 
 // Diff represents what needs to change to apply a profile
@@ -171,14 +173,11 @@ func ApplyWithExecutor(profile *Profile, claudeDir, claudeJSONPath string, secre
 		if err != nil {
 			// Check if the error is just "already uninstalled" - treat as success
 			if strings.Contains(output, "already uninstalled") {
-				fmt.Printf("✔ Plugin %s was already uninstalled\n", plugin)
-				result.PluginsRemoved = append(result.PluginsRemoved, plugin)
+				result.PluginsAlreadyRemoved = append(result.PluginsAlreadyRemoved, plugin)
 			} else {
-				fmt.Print(output) // Show the actual error output
-				result.Errors = append(result.Errors, fmt.Errorf("failed to uninstall plugin %s: %w", plugin, err))
+				result.Errors = append(result.Errors, fmt.Errorf("failed to uninstall plugin %s: %w (output: %s)", plugin, err, output))
 			}
 		} else {
-			fmt.Print(output) // Show success message
 			result.PluginsRemoved = append(result.PluginsRemoved, plugin)
 		}
 	}
@@ -209,14 +208,11 @@ func ApplyWithExecutor(profile *Profile, claudeDir, claudeJSONPath string, secre
 		if err != nil {
 			// Check if the error is just "already installed" - treat as success
 			if strings.Contains(output, "already installed") {
-				fmt.Printf("✔ Plugin %s is already installed\n", plugin)
-				result.PluginsInstalled = append(result.PluginsInstalled, plugin)
+				result.PluginsAlreadyPresent = append(result.PluginsAlreadyPresent, plugin)
 			} else {
-				fmt.Print(output) // Show the actual error output
-				result.Errors = append(result.Errors, fmt.Errorf("failed to install plugin %s: %w", plugin, err))
+				result.Errors = append(result.Errors, fmt.Errorf("failed to install plugin %s: %w (output: %s)", plugin, err, output))
 			}
 		} else {
-			fmt.Print(output) // Show success message
 			result.PluginsInstalled = append(result.PluginsInstalled, plugin)
 		}
 	}

@@ -218,7 +218,7 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 	}
 
 	// Silently clean up stale plugin entries
-	cleanupStalePlugins()
+	cleanupStalePlugins(claudeDir)
 
 	fmt.Println()
 	fmt.Println("✓ Profile applied!")
@@ -228,7 +228,7 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 
 // cleanupStalePlugins removes plugin entries with invalid paths
 // This is called automatically after profile apply to clean up zombie entries
-func cleanupStalePlugins() {
+func cleanupStalePlugins(claudeDir string) {
 	plugins, err := claude.LoadPlugins(claudeDir)
 	if err != nil {
 		return // Silently fail - this is just cleanup
@@ -443,11 +443,8 @@ func loadProfileWithFallback(profilesDir, name string) (*profile.Profile, error)
 }
 
 func runProfileCurrent(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
+	// Use same pattern as runStatus - gracefully handle missing config
+	cfg, _ := config.Load()
 	activeProfile := ""
 	if cfg != nil {
 		activeProfile = cfg.Preferences.ActiveProfile
