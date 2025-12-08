@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/claudeup/claudeup/internal/config"
@@ -154,17 +155,21 @@ func ensureClaudeCLI() error {
 	fmt.Println()
 	fmt.Println("Installing Claude CLI...")
 
-	cmd := exec.Command("bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := runClaudeInstaller(); err != nil {
 		return fmt.Errorf("failed to install Claude CLI: %w", err)
 	}
 
 	fmt.Println("  ✓ Claude CLI installed")
 	return nil
+}
+
+// runClaudeInstaller runs the official Claude CLI installer script
+func runClaudeInstaller() error {
+	cmd := exec.Command("bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func getClaudeVersion() string {
@@ -217,9 +222,9 @@ func parseVersion(version string) []int {
 			}
 		}
 		if numStr != "" {
-			var num int
-			fmt.Sscanf(numStr, "%d", &num)
-			nums = append(nums, num)
+			if num, err := strconv.Atoi(numStr); err == nil {
+				nums = append(nums, num)
+			}
 		}
 	}
 	return nums
@@ -247,12 +252,7 @@ func promptClaudeUpgrade(currentVersion string) error {
 	fmt.Println()
 	fmt.Println("Upgrading Claude CLI...")
 
-	cmd := exec.Command("bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := runClaudeInstaller(); err != nil {
 		return fmt.Errorf("failed to upgrade Claude CLI: %w", err)
 	}
 
