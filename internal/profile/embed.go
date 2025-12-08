@@ -66,3 +66,32 @@ func GetEmbeddedProfile(name string) (*Profile, error) {
 
 	return &p, nil
 }
+
+// ListEmbeddedProfiles returns all embedded profiles
+func ListEmbeddedProfiles() ([]*Profile, error) {
+	entries, err := embeddedProfiles.ReadDir("profiles")
+	if err != nil {
+		return nil, err
+	}
+
+	var profiles []*Profile
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if len(name) < 6 || name[len(name)-5:] != ".json" {
+			continue
+		}
+
+		profileName := name[:len(name)-5]
+		p, err := GetEmbeddedProfile(profileName)
+		if err != nil {
+			continue
+		}
+		profiles = append(profiles, p)
+	}
+
+	return profiles, nil
+}
