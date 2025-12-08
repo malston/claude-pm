@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed profiles/*.json
@@ -81,11 +82,11 @@ func ListEmbeddedProfiles() ([]*Profile, error) {
 		}
 
 		name := entry.Name()
-		if len(name) < 6 || name[len(name)-5:] != ".json" {
+		if !strings.HasSuffix(name, ".json") {
 			continue
 		}
 
-		profileName := name[:len(name)-5]
+		profileName := strings.TrimSuffix(name, ".json")
 		p, err := GetEmbeddedProfile(profileName)
 		if err != nil {
 			continue
