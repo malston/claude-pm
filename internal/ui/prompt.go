@@ -28,7 +28,15 @@ func SelectFromList(prompt string, items []string) ([]string, error) {
 		fmt.Printf("  %d) %s\n", i+1, item)
 	}
 	fmt.Println()
-	fmt.Print("Enter numbers (1 3 5), 'all', or 'none': ")
+
+	// Build dynamic prompt based on number of items
+	var promptText string
+	if len(items) == 1 {
+		promptText = "Enter 1, 'all', or 'none': "
+	} else {
+		promptText = fmt.Sprintf("Enter numbers (1-%d), 'all', or 'none': ", len(items))
+	}
+	fmt.Print(promptText)
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
