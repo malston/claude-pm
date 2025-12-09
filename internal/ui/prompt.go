@@ -1,19 +1,24 @@
 // ABOUTME: Interactive prompt UI functions for user input
-// ABOUTME: Handles numbered selection lists and yes/no confirmations
+// ABOUTME: Handles multi-select lists and yes/no confirmations
 package ui
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/claudeup/claudeup/internal/config"
 )
 
-// SelectFromList prompts user to select items from numbered list
-// Supports: "1 3 5", "all", "none", "1-5"
+// ErrUserCancelled is returned when user cancels a prompt with Ctrl+C
+var ErrUserCancelled = errors.New("cancelled by user")
+
+// SelectFromList prompts user to select items from a multi-select list
+// All items are selected by default; press enter to confirm, space to toggle
 func SelectFromList(prompt string, items []string) ([]string, error) {
 	if config.YesFlag {
 		return items, nil // Select all when --yes
@@ -23,39 +28,21 @@ func SelectFromList(prompt string, items []string) ([]string, error) {
 		return []string{}, nil
 	}
 
-	fmt.Println(prompt)
-	for i, item := range items {
-		fmt.Printf("  %d) %s\n", i+1, item)
+	// Pre-select all items by default
+	var selected []string
+	multiSelect := &survey.MultiSelect{
+		Message: prompt,
+		Options: items,
+		Default: items,
+		Help:    "↑/↓ move, space toggle, enter confirm",
 	}
-	fmt.Println()
-	fmt.Print("Enter numbers (1 3 5), 'all', or 'none': ")
 
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
+	err := survey.AskOne(multiSelect, &selected)
 	if err != nil {
-		return nil, err
-	}
-
-	input = strings.TrimSpace(input)
-
-	if input == "none" || input == "" {
-		return []string{}, nil
-	}
-
-	if input == "all" {
-		return items, nil
-	}
-
-	// Parse numbers
-	selected := []string{}
-	parts := strings.Fields(input)
-	for _, part := range parts {
-		num, err := strconv.Atoi(part)
-		if err != nil || num < 1 || num > len(items) {
-			fmt.Printf("Invalid selection: %s (skipping)\n", part)
-			continue
+		if err == terminal.InterruptErr {
+			return nil, ErrUserCancelled
 		}
-		selected = append(selected, items[num-1])
+		return nil, err
 	}
 
 	return selected, nil
