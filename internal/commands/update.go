@@ -118,8 +118,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	// Interactive selection for marketplaces
 	if len(outdatedMarketplaces) > 0 {
+		fmt.Println()
 		selectedMarketplaces, err := ui.SelectFromList(
-			"\nMarketplaces with updates available:",
+			"Select marketplaces to update:",
 			outdatedMarketplaces,
 		)
 		if err != nil {
@@ -130,8 +131,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	// Interactive selection for plugins
 	if len(outdatedPlugins) > 0 {
+		fmt.Println()
 		selectedPlugins, err := ui.SelectFromList(
-			"\nPlugins with updates available:",
+			"Select plugins to update:",
 			outdatedPlugins,
 		)
 		if err != nil {
