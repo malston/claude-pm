@@ -20,16 +20,18 @@ func TestSnapshotFromState(t *testing.T) {
 
 	// Create mock installed_plugins.json
 	pluginsData := map[string]interface{}{
-		"version": 1,
+		"version": 2,
 		"plugins": map[string]interface{}{
-			"superpowers@superpowers-marketplace": map[string]interface{}{
+			"superpowers@superpowers-marketplace": []map[string]interface{}{{
+				"scope":       "user",
 				"version":     "1.0.0",
 				"installPath": "/path/to/plugin",
-			},
-			"frontend-design@claude-code-plugins": map[string]interface{}{
+			}},
+			"frontend-design@claude-code-plugins": []map[string]interface{}{{
+				"scope":       "user",
 				"version":     "2.0.0",
 				"installPath": "/path/to/plugin2",
-			},
+			}},
 		},
 	}
 	writeJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), pluginsData)

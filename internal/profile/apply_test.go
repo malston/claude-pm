@@ -17,10 +17,10 @@ func TestComputeDiffPlugins(t *testing.T) {
 
 	// Current state: plugins A and B installed
 	currentPlugins := map[string]interface{}{
-		"version": 1,
+		"version": 2,
 		"plugins": map[string]interface{}{
-			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
-			"plugin-b@marketplace": map[string]interface{}{"version": "1.0"},
+			"plugin-a@marketplace": []map[string]interface{}{{"scope": "user", "version": "1.0"}},
+			"plugin-b@marketplace": []map[string]interface{}{{"scope": "user", "version": "1.0"}},
 		},
 	}
 	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), currentPlugins)
@@ -62,7 +62,7 @@ func TestComputeDiffMCPServers(t *testing.T) {
 			"server-b": map[string]interface{}{"command": "cmd-b"},
 		},
 	}
-	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), map[string]interface{}{"version": 1, "plugins": map[string]interface{}{}})
+	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), map[string]interface{}{"version": 2, "plugins": map[string]interface{}{}})
 	writeTestJSON(t, filepath.Join(pluginsDir, "known_marketplaces.json"), map[string]interface{}{})
 	writeTestJSON(t, filepath.Join(tmpDir, ".claude.json"), claudeJSON)
 
@@ -150,10 +150,10 @@ func TestComputeDiffEmptyProfileRemovesEverything(t *testing.T) {
 
 	// Current state: has plugins and MCP servers
 	currentPlugins := map[string]interface{}{
-		"version": 1,
+		"version": 2,
 		"plugins": map[string]interface{}{
-			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
-			"plugin-b@marketplace": map[string]interface{}{"version": "1.0"},
+			"plugin-a@marketplace": []map[string]interface{}{{"scope": "user", "version": "1.0"}},
+			"plugin-b@marketplace": []map[string]interface{}{{"scope": "user", "version": "1.0"}},
 		},
 	}
 	claudeJSON := map[string]interface{}{
@@ -294,7 +294,7 @@ func TestComputeDiffMarketplacesOnlyAdd(t *testing.T) {
 			},
 		},
 	}
-	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), map[string]interface{}{"version": 1, "plugins": map[string]interface{}{}})
+	writeTestJSON(t, filepath.Join(pluginsDir, "installed_plugins.json"), map[string]interface{}{"version": 2, "plugins": map[string]interface{}{}})
 	writeTestJSON(t, filepath.Join(pluginsDir, "known_marketplaces.json"), marketplaces)
 	writeTestJSON(t, filepath.Join(tmpDir, ".claude.json"), map[string]interface{}{})
 

@@ -60,17 +60,20 @@ func TestDiscoverMCPServers(t *testing.T) {
 
 	// Create plugin registry
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: map[string]claude.PluginMetadata{
-			"plugin1@marketplace": {
+		Version: 2,
+		Plugins: map[string][]claude.PluginMetadata{
+			"plugin1@marketplace": {{
+				Scope:       "user",
 				InstallPath: pluginPath1,
-			},
-			"plugin2@marketplace": {
+			}},
+			"plugin2@marketplace": {{
+				Scope:       "user",
 				InstallPath: pluginPath2,
-			},
-			"plugin3@marketplace": {
+			}},
+			"plugin3@marketplace": {{
+				Scope:       "user",
 				InstallPath: filepath.Join(tempDir, "non-existent"),
-			},
+			}},
 		},
 	}
 
@@ -143,11 +146,12 @@ func TestDiscoverMCPServersWithEnv(t *testing.T) {
 
 	// Create plugin registry
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: map[string]claude.PluginMetadata{
-			"plugin@marketplace": {
+		Version: 2,
+		Plugins: map[string][]claude.PluginMetadata{
+			"plugin@marketplace": {{
+				Scope:       "user",
 				InstallPath: pluginPath,
-			},
+			}},
 		},
 	}
 
@@ -195,11 +199,12 @@ func TestDiscoverMCPServersInvalidJSON(t *testing.T) {
 
 	// Create plugin registry
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: map[string]claude.PluginMetadata{
-			"plugin@marketplace": {
+		Version: 2,
+		Plugins: map[string][]claude.PluginMetadata{
+			"plugin@marketplace": {{
+				Scope:       "user",
 				InstallPath: pluginPath,
-			},
+			}},
 		},
 	}
 
@@ -230,11 +235,12 @@ func TestDiscoverMCPServersNoPluginJSON(t *testing.T) {
 
 	// Create plugin registry
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: map[string]claude.PluginMetadata{
-			"plugin@marketplace": {
+		Version: 2,
+		Plugins: map[string][]claude.PluginMetadata{
+			"plugin@marketplace": {{
+				Scope:       "user",
 				InstallPath: pluginPath,
-			},
+			}},
 		},
 	}
 
@@ -251,8 +257,8 @@ func TestDiscoverMCPServersNoPluginJSON(t *testing.T) {
 
 func TestDiscoverMCPServersEmptyRegistry(t *testing.T) {
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: map[string]claude.PluginMetadata{},
+		Version: 2,
+		Plugins: make(map[string][]claude.PluginMetadata),
 	}
 
 	servers, err := DiscoverMCPServers(registry)
