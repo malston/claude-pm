@@ -104,7 +104,7 @@ func TestPluginsListCommand(t *testing.T) {
 		t.Errorf("Expected 2 plugins, got %d", len(registry.Plugins))
 	}
 
-	plugin1 := registry.Plugins["plugin1@test-marketplace"]
+	plugin1, _ := registry.GetPlugin("plugin1@test-marketplace")
 	if plugin1.Version != "1.0.0" {
 		t.Errorf("Expected version 1.0.0, got %s", plugin1.Version)
 	}
@@ -113,7 +113,7 @@ func TestPluginsListCommand(t *testing.T) {
 		t.Error("plugin1 should not be local")
 	}
 
-	plugin2 := registry.Plugins["plugin2@test-marketplace"]
+	plugin2, _ := registry.GetPlugin("plugin2@test-marketplace")
 	if plugin2.Version != "2.0.0" {
 		t.Errorf("Expected version 2.0.0, got %s", plugin2.Version)
 	}

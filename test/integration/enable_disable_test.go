@@ -39,7 +39,7 @@ func TestPluginDisableEnable(t *testing.T) {
 
 	// Disable the plugin
 	registry := env.LoadPluginRegistry()
-	metadata := registry.Plugins["test-plugin@test-marketplace"]
+	metadata, _ := registry.GetPlugin("test-plugin@test-marketplace")
 
 	cfg := config.DefaultConfig()
 	cfg.DisablePlugin("test-plugin@test-marketplace", config.DisabledPlugin{
@@ -179,7 +179,7 @@ func TestMultiplePluginsDisable(t *testing.T) {
 	cfg := config.DefaultConfig()
 
 	for _, name := range []string{"plugin1@test-marketplace", "plugin3@test-marketplace"} {
-		metadata := registry.Plugins[name]
+		metadata, _ := registry.GetPlugin(name)
 		cfg.DisablePlugin(name, config.DisabledPlugin{
 			Version:     metadata.Version,
 			InstallPath: metadata.InstallPath,

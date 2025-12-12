@@ -584,9 +584,23 @@ func (e *applyTestEnv) cleanup() {
 
 func (e *applyTestEnv) createPluginRegistry(plugins map[string]interface{}) {
 	e.t.Helper()
+	// Convert to V2 format (plugins as arrays with scope)
+	pluginsV2 := make(map[string]interface{})
+	for name, meta := range plugins {
+		// Wrap each plugin in an array and add scope
+		metaMap, ok := meta.(map[string]interface{})
+		if !ok {
+			metaMap = make(map[string]interface{})
+		}
+		// Ensure scope is set
+		if _, hasScope := metaMap["scope"]; !hasScope {
+			metaMap["scope"] = "user"
+		}
+		pluginsV2[name] = []interface{}{metaMap}
+	}
 	data := map[string]interface{}{
-		"version": 1,
-		"plugins": plugins,
+		"version": 2,
+		"plugins": pluginsV2,
 	}
 	e.writeJSON(filepath.Join(e.claudeDir, "plugins", "installed_plugins.json"), data)
 }

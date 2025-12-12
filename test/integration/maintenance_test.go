@@ -39,7 +39,7 @@ func TestDoctorDetectsStalePlugins(t *testing.T) {
 	validCount := 0
 	staleCount := 0
 
-	for _, plugin := range registry.Plugins {
+	for _, plugin := range registry.GetAllPlugins() {
 		if plugin.PathExists() {
 			validCount++
 		} else {
@@ -80,7 +80,7 @@ func TestFixPathsCorrectsPaths(t *testing.T) {
 
 	// Plugin should not exist at wrong path
 	registry := env.LoadPluginRegistry()
-	plugin := registry.Plugins["test-plugin@claude-code-plugins"]
+	plugin, _ := registry.GetPlugin("test-plugin@claude-code-plugins")
 	if plugin.PathExists() {
 		t.Error("Plugin should not exist at wrong path")
 	}
@@ -102,7 +102,7 @@ func TestFixPathsCorrectsPaths(t *testing.T) {
 
 	// Fix the path by updating the registry
 	plugin.InstallPath = correctPath
-	registry.Plugins["test-plugin@claude-code-plugins"] = plugin
+	registry.SetPlugin("test-plugin@claude-code-plugins", plugin)
 
 	if err := claude.SavePlugins(env.ClaudeDir, registry); err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func TestFixPathsCorrectsPaths(t *testing.T) {
 
 	// Reload and verify the path was persisted
 	registry = env.LoadPluginRegistry()
-	plugin = registry.Plugins["test-plugin@claude-code-plugins"]
+	plugin, _ = registry.GetPlugin("test-plugin@claude-code-plugins")
 
 	if plugin.InstallPath != correctPath {
 		t.Errorf("Expected path %s, got %s", correctPath, plugin.InstallPath)
@@ -157,7 +157,7 @@ func TestCleanupRemovesStalePlugins(t *testing.T) {
 	// Clean up stale plugins
 	registry := env.LoadPluginRegistry()
 
-	for name, plugin := range registry.Plugins {
+	for name, plugin := range registry.GetAllPlugins() {
 		if !plugin.PathExists() {
 			registry.DisablePlugin(name)
 		}
@@ -221,20 +221,20 @@ func TestFixPathsMultipleMarketplaces(t *testing.T) {
 	// Both should not exist at wrong paths
 	registry := env.LoadPluginRegistry()
 
-	for _, plugin := range registry.Plugins {
+	for _, plugin := range registry.GetAllPlugins() {
 		if plugin.PathExists() {
 			t.Error("Plugins should not exist at wrong paths")
 		}
 	}
 
 	// Fix paths by directly setting to correct paths
-	plugin1 := registry.Plugins["plugin1@claude-code-plugins"]
+	plugin1, _ := registry.GetPlugin("plugin1@claude-code-plugins")
 	plugin1.InstallPath = correctPath1
-	registry.Plugins["plugin1@claude-code-plugins"] = plugin1
+	registry.SetPlugin("plugin1@claude-code-plugins", plugin1)
 
-	plugin2 := registry.Plugins["plugin2@every-marketplace"]
+	plugin2, _ := registry.GetPlugin("plugin2@every-marketplace")
 	plugin2.InstallPath = correctPath2
-	registry.Plugins["plugin2@every-marketplace"] = plugin2
+	registry.SetPlugin("plugin2@every-marketplace", plugin2)
 
 	if err := claude.SavePlugins(env.ClaudeDir, registry); err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestFixPathsMultipleMarketplaces(t *testing.T) {
 	// Reload to verify the saved changes
 	registry = env.LoadPluginRegistry()
 
-	plugin1 = registry.Plugins["plugin1@claude-code-plugins"]
+	plugin1, _ = registry.GetPlugin("plugin1@claude-code-plugins")
 	if plugin1.InstallPath != correctPath1 {
 		t.Errorf("Plugin1 expected path %s, got %s", correctPath1, plugin1.InstallPath)
 	}
@@ -252,7 +252,7 @@ func TestFixPathsMultipleMarketplaces(t *testing.T) {
 		t.Error("Plugin1 should exist at corrected path")
 	}
 
-	plugin2 = registry.Plugins["plugin2@every-marketplace"]
+	plugin2, _ = registry.GetPlugin("plugin2@every-marketplace")
 	if plugin2.InstallPath != correctPath2 {
 		t.Errorf("Plugin2 expected path %s, got %s", correctPath2, plugin2.InstallPath)
 	}
@@ -308,7 +308,7 @@ func TestUnifiedCleanupFixesAndRemoves(t *testing.T) {
 	fixed := 0
 	removed := 0
 
-	for name, plugin := range registry.Plugins {
+	for name, plugin := range registry.GetAllPlugins() {
 		if !plugin.PathExists() {
 			// Try to get expected path
 			var expectedPath string
@@ -324,7 +324,7 @@ func TestUnifiedCleanupFixesAndRemoves(t *testing.T) {
 				updatedPlugin.InstallPath = expectedPath
 				if updatedPlugin.PathExists() {
 					plugin.InstallPath = expectedPath
-					registry.Plugins[name] = plugin
+					registry.SetPlugin(name, plugin)
 					fixed++
 					continue
 				}
@@ -356,7 +356,7 @@ func TestUnifiedCleanupFixesAndRemoves(t *testing.T) {
 
 	// Verify the fixable plugin was fixed
 	registry = env.LoadPluginRegistry()
-	fixedPlugin := registry.Plugins["fixable-plugin@claude-code-plugins"]
+	fixedPlugin, _ := registry.GetPlugin("fixable-plugin@claude-code-plugins")
 	if fixedPlugin.InstallPath != correctPath {
 		t.Errorf("Expected fixed path %s, got %s", correctPath, fixedPlugin.InstallPath)
 	}

@@ -92,9 +92,19 @@ func (e *TestEnv) CreatePlugin(name, marketplace, version string, mcpServers map
 func (e *TestEnv) CreatePluginRegistry(plugins map[string]claude.PluginMetadata) {
 	e.t.Helper()
 
+	// Convert to V2 format
+	pluginsV2 := make(map[string][]claude.PluginMetadata)
+	for name, meta := range plugins {
+		// Ensure scope is set
+		if meta.Scope == "" {
+			meta.Scope = "user"
+		}
+		pluginsV2[name] = []claude.PluginMetadata{meta}
+	}
+
 	registry := &claude.PluginRegistry{
-		Version: 1,
-		Plugins: plugins,
+		Version: 2,
+		Plugins: pluginsV2,
 	}
 
 	if err := claude.SavePlugins(e.ClaudeDir, registry); err != nil {
