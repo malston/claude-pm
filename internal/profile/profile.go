@@ -12,13 +12,21 @@ import (
 
 // Profile represents a Claude Code configuration profile
 type Profile struct {
-	Name         string        `json:"name"`
-	Description  string        `json:"description,omitempty"`
-	MCPServers   []MCPServer   `json:"mcpServers,omitempty"`
-	Marketplaces []Marketplace `json:"marketplaces,omitempty"`
-	Plugins      []string      `json:"plugins,omitempty"`
-	Detect       DetectRules   `json:"detect,omitempty"`
-	Sandbox      SandboxConfig `json:"sandbox,omitempty"`
+	Name         string         `json:"name"`
+	Description  string         `json:"description,omitempty"`
+	MCPServers   []MCPServer    `json:"mcpServers,omitempty"`
+	Marketplaces []Marketplace  `json:"marketplaces,omitempty"`
+	Plugins      []string       `json:"plugins,omitempty"`
+	Detect       DetectRules    `json:"detect,omitempty"`
+	Sandbox      SandboxConfig  `json:"sandbox,omitempty"`
+	PostApply    *PostApplyHook `json:"postApply,omitempty"`
+}
+
+// PostApplyHook defines a hook to run after a profile is applied
+type PostApplyHook struct {
+	Script    string `json:"script,omitempty"`    // Script path relative to profile
+	Command   string `json:"command,omitempty"`   // Direct command to run
+	Condition string `json:"condition,omitempty"` // "always" or "first-run"
 }
 
 // SandboxConfig defines sandbox-specific settings for a profile

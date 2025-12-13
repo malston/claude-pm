@@ -63,6 +63,12 @@ var profileCurrentCmd = &cobra.Command{
 	RunE:  runProfileCurrent,
 }
 
+// Flags for profile use command
+var (
+	profileUseSetup         bool
+	profileUseNoInteractive bool
+)
+
 func init() {
 	rootCmd.AddCommand(profileCmd)
 	profileCmd.AddCommand(profileListCmd)
@@ -71,6 +77,10 @@ func init() {
 	profileCmd.AddCommand(profileShowCmd)
 	profileCmd.AddCommand(profileSuggestCmd)
 	profileCmd.AddCommand(profileCurrentCmd)
+
+	// Add flags to profile use command
+	profileUseCmd.Flags().BoolVar(&profileUseSetup, "setup", false, "Force post-apply setup wizard to run")
+	profileUseCmd.Flags().BoolVar(&profileUseNoInteractive, "no-interactive", false, "Skip post-apply setup wizard (for CI/scripting)")
 }
 
 func runProfileList(cmd *cobra.Command, args []string) error {
@@ -222,6 +232,20 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	fmt.Println("✓ Profile applied!")
+
+	// Run post-apply hook if applicable
+	hookOpts := profile.HookOptions{
+		ForceSetup:    profileUseSetup,
+		NoInteractive: profileUseNoInteractive,
+		ScriptDir:     profile.GetEmbeddedProfileScriptDir(name),
+	}
+
+	if profile.ShouldRunHook(p, claudeDir, claudeJSONPath, hookOpts) {
+		fmt.Println()
+		if err := profile.RunHook(p, hookOpts); err != nil {
+			fmt.Printf("  ⚠ Post-apply hook failed: %v\n", err)
+		}
+	}
 
 	return nil
 }

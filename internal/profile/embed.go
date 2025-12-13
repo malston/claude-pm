@@ -14,6 +14,9 @@ import (
 //go:embed profiles/*.json
 var embeddedProfiles embed.FS
 
+//go:embed all:profiles/scripts
+var embeddedScripts embed.FS
+
 // EnsureDefaultProfiles extracts embedded profiles to the profiles directory
 // if they don't already exist
 func EnsureDefaultProfiles(profilesDir string) error {
@@ -97,4 +100,40 @@ func ListEmbeddedProfiles() ([]*Profile, error) {
 	}
 
 	return profiles, nil
+}
+
+// GetEmbeddedProfileScriptDir extracts embedded scripts for a profile to a temp directory
+// Returns empty string if no scripts exist for the profile
+func GetEmbeddedProfileScriptDir(profileName string) string {
+	// Check if scripts directory exists for this profile
+	scriptDir := "profiles/scripts/" + profileName
+	entries, err := embeddedScripts.ReadDir(scriptDir)
+	if err != nil || len(entries) == 0 {
+		return ""
+	}
+
+	// Create temp directory for scripts
+	tempDir, err := os.MkdirTemp("", "claudeup-scripts-"+profileName+"-")
+	if err != nil {
+		return ""
+	}
+
+	// Extract scripts
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		data, err := embeddedScripts.ReadFile(scriptDir + "/" + entry.Name())
+		if err != nil {
+			continue
+		}
+
+		destPath := filepath.Join(tempDir, entry.Name())
+		if err := os.WriteFile(destPath, data, 0755); err != nil {
+			continue
+		}
+	}
+
+	return tempDir
 }

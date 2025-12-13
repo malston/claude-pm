@@ -84,6 +84,43 @@ claudeup setup --profile frontend-full
 
 ---
 
+### hobson
+
+Full access to the [wshobson/agents](https://github.com/wshobson/agents) plugin marketplace with an interactive category-based setup wizard.
+
+```bash
+claudeup setup --profile hobson
+```
+
+**Marketplaces:**
+- `wshobson/agents` - Comprehensive plugin collection with 65+ plugins
+
+**Plugins:** Selected during interactive setup wizard
+
+**Categories available:**
+- Core Development - workflows, debugging, docs, refactoring
+- Quality & Testing - code review, testing, cleanup
+- AI & Machine Learning - LLM dev, agents, MLOps
+- Infrastructure & DevOps - K8s, cloud, CI/CD, monitoring
+- Security & Compliance - scanning, compliance, API security
+- Data & Databases - ETL, schema design, migrations
+- Languages - Python, JS/TS, Go, Rust, etc.
+- Business & Specialty - SEO, analytics, blockchain, gaming
+
+**Setup wizard:** On first use, an interactive wizard guides you through selecting which categories to enable. Use `--setup` to re-run the wizard, or `--no-interactive` to skip it.
+
+```bash
+# Re-run setup wizard
+claudeup profile use hobson --setup
+
+# Skip wizard (for CI/scripting)
+claudeup profile use hobson --no-interactive
+```
+
+**Use when:** Want access to a large plugin marketplace with guided setup.
+
+---
+
 Built-in profiles appear with `[built-in]` in the profile list:
 
 ```
@@ -93,6 +130,7 @@ Available profiles:
   default              Base Claude Code setup with essential marketplaces [built-in]
   frontend             Frontend development: Next.js, Tailwind, shadcn, Vercel [built-in]
   frontend-full        Complete frontend development with E2E testing... [built-in]
+  hobson               Full access to wshobson/agents with setup wizard [built-in]
 ```
 
 ## Profile Structure
