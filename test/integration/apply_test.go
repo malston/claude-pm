@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/claudeup/claudeup/internal/profile"
 	"github.com/claudeup/claudeup/internal/secrets"
@@ -84,491 +86,26 @@ func min(a, b int) int {
 	return b
 }
 
-func TestApplyInstallsPlugins(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: no plugins
-	// Profile: wants plugin-a
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{"plugin-a@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have called plugin install
-	if !executor.HasCommand("plugin", "install", "plugin-a@marketplace") {
-		t.Error("Expected plugin install command")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-
-	if len(result.PluginsInstalled) != 1 {
-		t.Errorf("Expected 1 plugin installed, got %d", len(result.PluginsInstalled))
-	}
-}
-
-func TestApplyRemovesPlugins(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: plugin-a and plugin-b installed
-	env.createPluginRegistry(map[string]interface{}{
-		"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
-		"plugin-b@marketplace": map[string]interface{}{"version": "1.0"},
-	})
-
-	// Profile: only wants plugin-a (should remove plugin-b)
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{"plugin-a@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have called plugin uninstall for plugin-b
-	if !executor.HasCommand("plugin", "uninstall", "plugin-b@marketplace") {
-		t.Error("Expected plugin uninstall command for plugin-b")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-
-	if len(result.PluginsRemoved) != 1 {
-		t.Errorf("Expected 1 plugin removed, got %d", len(result.PluginsRemoved))
-	}
-}
-
-func TestApplyAddsMCPServers(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Profile: wants an MCP server
-	p := &profile.Profile{
-		Name: "test",
-		MCPServers: []profile.MCPServer{
-			{
-				Name:    "test-mcp",
-				Command: "npx",
-				Args:    []string{"-y", "test-package"},
-				Scope:   "user",
-			},
-		},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have called mcp add
-	if !executor.HasCommand("mcp", "add", "test-mcp") {
-		t.Error("Expected mcp add command")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-
-	if len(result.MCPServersInstalled) != 1 {
-		t.Errorf("Expected 1 MCP server installed, got %d", len(result.MCPServersInstalled))
-	}
-}
-
-func TestApplyRemovesMCPServers(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: has an MCP server
-	env.createClaudeJSON(map[string]interface{}{
-		"mcpServers": map[string]interface{}{
-			"old-mcp": map[string]interface{}{
-				"command": "node",
-				"args":    []string{"server.js"},
-			},
-		},
-	})
-
-	// Profile: no MCP servers (should remove old-mcp)
-	p := &profile.Profile{
-		Name:       "test",
-		MCPServers: []profile.MCPServer{},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have called mcp remove
-	if !executor.HasCommand("mcp", "remove", "old-mcp") {
-		t.Error("Expected mcp remove command")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-
-	if len(result.MCPServersRemoved) != 1 {
-		t.Errorf("Expected 1 MCP server removed, got %d", len(result.MCPServersRemoved))
-	}
-}
-
-func TestApplyAddsMarketplaces(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Profile: wants a marketplace
-	p := &profile.Profile{
-		Name: "test",
-		Marketplaces: []profile.Marketplace{
-			{Source: "github", Repo: "test-org/test-marketplace"},
-		},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have called marketplace add
-	if !executor.HasCommand("plugin", "marketplace", "add") {
-		t.Error("Expected marketplace add command")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-
-	if len(result.MarketplacesAdded) != 1 {
-		t.Errorf("Expected 1 marketplace added, got %d", len(result.MarketplacesAdded))
-	}
-}
-
-func TestApplyWithSecrets(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Set up an env var for the secret
-	os.Setenv("TEST_API_KEY", "secret-value-123")
-	defer os.Unsetenv("TEST_API_KEY")
-
-	// Profile: MCP server that needs a secret
-	p := &profile.Profile{
-		Name: "test",
-		MCPServers: []profile.MCPServer{
-			{
-				Name:    "secret-mcp",
-				Command: "npx",
-				Args:    []string{"-y", "package", "$TEST_API_KEY"},
-				Secrets: map[string]profile.SecretRef{
-					"TEST_API_KEY": {
-						Description: "Test API key",
-						Sources: []profile.SecretSource{
-							{Type: "env", Key: "TEST_API_KEY"},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have resolved the secret
-	if len(result.MCPServersInstalled) != 1 {
-		t.Errorf("Expected 1 MCP server installed, got %d", len(result.MCPServersInstalled))
-	}
-
-	// Check that the command includes the resolved secret
-	found := false
-	for _, cmd := range executor.Commands {
-		for _, arg := range cmd {
-			if arg == "secret-value-123" {
-				found = true
-				break
-			}
-		}
-	}
-	if !found {
-		t.Error("Expected resolved secret in command args")
-		t.Logf("Commands: %v", executor.Commands)
-	}
-}
-
-func TestApplyMissingSecretFails(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// DON'T set up the env var - secret should fail
-
-	p := &profile.Profile{
-		Name: "test",
-		MCPServers: []profile.MCPServer{
-			{
-				Name:    "secret-mcp",
-				Command: "npx",
-				Args:    []string{"package", "$MISSING_SECRET"},
-				Secrets: map[string]profile.SecretRef{
-					"MISSING_SECRET": {
-						Sources: []profile.SecretSource{
-							{Type: "env", Key: "MISSING_SECRET"},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err == nil {
-		t.Error("Expected error for missing secret")
-	}
-}
-
-func TestApplyCommandOrder(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: has plugins to remove
-	env.createPluginRegistry(map[string]interface{}{
-		"old-plugin@marketplace": map[string]interface{}{"version": "1.0"},
-	})
-
-	// Profile: different plugins and marketplaces
-	p := &profile.Profile{
-		Name: "test",
-		Marketplaces: []profile.Marketplace{
-			{Source: "github", Repo: "new-marketplace"},
-		},
-		Plugins: []string{"new-plugin@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Verify order: removals first, then adds
-	// 1. plugin uninstall (remove old)
-	// 2. marketplace add (add new)
-	// 3. plugin install (add new)
-
-	uninstallIdx := -1
-	marketplaceIdx := -1
-	installIdx := -1
-
-	for i, cmd := range executor.Commands {
-		if len(cmd) >= 2 {
-			if cmd[0] == "plugin" && cmd[1] == "uninstall" {
-				uninstallIdx = i
-			}
-			if cmd[0] == "plugin" && cmd[1] == "marketplace" {
-				marketplaceIdx = i
-			}
-			if cmd[0] == "plugin" && cmd[1] == "install" {
-				installIdx = i
-			}
-		}
-	}
-
-	if uninstallIdx == -1 || marketplaceIdx == -1 || installIdx == -1 {
-		t.Fatalf("Missing expected commands: uninstall=%d, marketplace=%d, install=%d",
-			uninstallIdx, marketplaceIdx, installIdx)
-	}
-
-	if uninstallIdx > marketplaceIdx {
-		t.Error("Expected uninstall before marketplace add")
-	}
-	if marketplaceIdx > installIdx {
-		t.Error("Expected marketplace add before plugin install")
-	}
-}
-
-func TestApplyPluginAlreadyUninstalled(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: plugin-a in JSON but already uninstalled in Claude CLI
-	env.createPluginRegistry(map[string]interface{}{
-		"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
-	})
-
-	// Profile: empty (should remove plugin-a)
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{},
-	}
-
-	executor := NewMockExecutor()
-	// Simulate Claude CLI returning "already uninstalled" error
-	executor.Errors["plugin uninstall plugin-a@marketplace"] = fmt.Errorf("uninstall failed")
-	executor.Outputs["plugin uninstall plugin-a@marketplace"] = "Error: plugin-a@marketplace is already uninstalled"
-
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should be tracked in AlreadyRemoved, not as an error
-	if len(result.PluginsAlreadyRemoved) != 1 {
-		t.Errorf("Expected 1 plugin in AlreadyRemoved, got %d", len(result.PluginsAlreadyRemoved))
-	}
-	if len(result.Errors) != 0 {
-		t.Errorf("Expected no errors for already uninstalled plugin, got: %v", result.Errors)
-	}
-}
-
-func TestApplyPluginAlreadyInstalled(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Profile: wants plugin-a (which is already installed per Claude CLI)
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{"plugin-a@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	// Simulate Claude CLI returning "already installed" error
-	executor.Errors["plugin install plugin-a@marketplace"] = fmt.Errorf("install failed")
-	executor.Outputs["plugin install plugin-a@marketplace"] = "Error: plugin-a@marketplace is already installed"
-
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should be tracked in AlreadyPresent, not as an error
-	if len(result.PluginsAlreadyPresent) != 1 {
-		t.Errorf("Expected 1 plugin in AlreadyPresent, got %d", len(result.PluginsAlreadyPresent))
-	}
-	if len(result.Errors) != 0 {
-		t.Errorf("Expected no errors for already installed plugin, got: %v", result.Errors)
-	}
-}
-
-func TestApplyAllProfilePluginsAttempted(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Current state: plugin-a already in JSON
-	env.createPluginRegistry(map[string]interface{}{
-		"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
-	})
-
-	// Profile: wants plugin-a and plugin-b
-	// Both should be attempted to ensure proper CLI registration
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{"plugin-a@marketplace", "plugin-b@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Should have attempted to install both plugins
-	if !executor.HasCommand("plugin", "install", "plugin-a@marketplace") {
-		t.Error("Expected install attempt for plugin-a even though it's in JSON")
-	}
-	if !executor.HasCommand("plugin", "install", "plugin-b@marketplace") {
-		t.Error("Expected install attempt for plugin-b")
-	}
-
-	// Both should be in installed list (successful install)
-	if len(result.PluginsInstalled) != 2 {
-		t.Errorf("Expected 2 plugins installed, got %d", len(result.PluginsInstalled))
-	}
-}
-
-func TestApplyPluginInstallRealError(t *testing.T) {
-	env := setupApplyTestEnv(t)
-	defer env.cleanup()
-
-	// Profile: wants plugin-a
-	p := &profile.Profile{
-		Name:    "test",
-		Plugins: []string{"plugin-a@marketplace"},
-	}
-
-	executor := NewMockExecutor()
-	// Simulate a real installation failure (not "already installed")
-	executor.Errors["plugin install plugin-a@marketplace"] = fmt.Errorf("install failed")
-	executor.Outputs["plugin install plugin-a@marketplace"] = "Error: network timeout while downloading plugin"
-
-	chain := secrets.NewChain(secrets.NewEnvResolver())
-
-	result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
-	if err != nil {
-		t.Fatalf("Apply failed: %v", err)
-	}
-
-	// Real errors should be tracked in Errors, not AlreadyPresent
-	if len(result.Errors) != 1 {
-		t.Errorf("Expected 1 error, got %d", len(result.Errors))
-	}
-	if len(result.PluginsAlreadyPresent) != 0 {
-		t.Errorf("Expected 0 plugins in AlreadyPresent, got %d", len(result.PluginsAlreadyPresent))
-	}
-	if len(result.PluginsInstalled) != 0 {
-		t.Errorf("Expected 0 plugins installed, got %d", len(result.PluginsInstalled))
-	}
-}
-
 // Test environment helpers
 
 type applyTestEnv struct {
 	claudeDir  string
 	claudeJSON string
-	t          *testing.T
 }
 
-func setupApplyTestEnv(t *testing.T) *applyTestEnv {
-	t.Helper()
-	tmpDir := t.TempDir()
+func setupApplyTestEnv() *applyTestEnv {
+	tmpDir := GinkgoT().TempDir()
 
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	pluginsDir := filepath.Join(claudeDir, "plugins")
-	os.MkdirAll(pluginsDir, 0755)
+	err := os.MkdirAll(pluginsDir, 0755)
+	Expect(err).NotTo(HaveOccurred())
 
 	claudeJSON := filepath.Join(tmpDir, ".claude.json")
 
-	// Create empty registries
 	env := &applyTestEnv{
 		claudeDir:  claudeDir,
 		claudeJSON: claudeJSON,
-		t:          t,
 	}
 
 	env.createPluginRegistry(map[string]interface{}{})
@@ -578,21 +115,14 @@ func setupApplyTestEnv(t *testing.T) *applyTestEnv {
 	return env
 }
 
-func (e *applyTestEnv) cleanup() {
-	// t.TempDir() handles cleanup
-}
-
 func (e *applyTestEnv) createPluginRegistry(plugins map[string]interface{}) {
-	e.t.Helper()
 	// Convert to V2 format (plugins as arrays with scope)
 	pluginsV2 := make(map[string]interface{})
 	for name, meta := range plugins {
-		// Wrap each plugin in an array and add scope
 		metaMap, ok := meta.(map[string]interface{})
 		if !ok {
 			metaMap = make(map[string]interface{})
 		}
-		// Ensure scope is set
 		if _, hasScope := metaMap["scope"]; !hasScope {
 			metaMap["scope"] = "user"
 		}
@@ -606,22 +136,414 @@ func (e *applyTestEnv) createPluginRegistry(plugins map[string]interface{}) {
 }
 
 func (e *applyTestEnv) createMarketplaceRegistry(marketplaces map[string]interface{}) {
-	e.t.Helper()
 	e.writeJSON(filepath.Join(e.claudeDir, "plugins", "known_marketplaces.json"), marketplaces)
 }
 
 func (e *applyTestEnv) createClaudeJSON(data map[string]interface{}) {
-	e.t.Helper()
 	e.writeJSON(e.claudeJSON, data)
 }
 
 func (e *applyTestEnv) writeJSON(path string, data interface{}) {
-	e.t.Helper()
 	bytes, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		e.t.Fatal(err)
-	}
-	if err := os.WriteFile(path, bytes, 0644); err != nil {
-		e.t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
+	err = os.WriteFile(path, bytes, 0644)
+	Expect(err).NotTo(HaveOccurred())
 }
+
+var _ = Describe("ApplyInstallsPlugins", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("installs plugins", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{"plugin-a@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("plugin", "install", "plugin-a@marketplace")).To(BeTrue(), "Expected plugin install command. Commands: %v", executor.Commands)
+		Expect(result.PluginsInstalled).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("ApplyRemovesPlugins", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		env.createPluginRegistry(map[string]interface{}{
+			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
+			"plugin-b@marketplace": map[string]interface{}{"version": "1.0"},
+		})
+	})
+
+	It("removes plugins not in profile", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{"plugin-a@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("plugin", "uninstall", "plugin-b@marketplace")).To(BeTrue(), "Expected plugin uninstall command for plugin-b. Commands: %v", executor.Commands)
+		Expect(result.PluginsRemoved).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("ApplyAddsMCPServers", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("adds MCP servers", func() {
+		p := &profile.Profile{
+			Name: "test",
+			MCPServers: []profile.MCPServer{
+				{
+					Name:    "test-mcp",
+					Command: "npx",
+					Args:    []string{"-y", "test-package"},
+					Scope:   "user",
+				},
+			},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("mcp", "add", "test-mcp")).To(BeTrue(), "Expected mcp add command. Commands: %v", executor.Commands)
+		Expect(result.MCPServersInstalled).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("ApplyRemovesMCPServers", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		env.createClaudeJSON(map[string]interface{}{
+			"mcpServers": map[string]interface{}{
+				"old-mcp": map[string]interface{}{
+					"command": "node",
+					"args":    []string{"server.js"},
+				},
+			},
+		})
+	})
+
+	It("removes MCP servers not in profile", func() {
+		p := &profile.Profile{
+			Name:       "test",
+			MCPServers: []profile.MCPServer{},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("mcp", "remove", "old-mcp")).To(BeTrue(), "Expected mcp remove command. Commands: %v", executor.Commands)
+		Expect(result.MCPServersRemoved).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("ApplyAddsMarketplaces", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("adds marketplaces", func() {
+		p := &profile.Profile{
+			Name: "test",
+			Marketplaces: []profile.Marketplace{
+				{Source: "github", Repo: "test-org/test-marketplace"},
+			},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("plugin", "marketplace", "add")).To(BeTrue(), "Expected marketplace add command. Commands: %v", executor.Commands)
+		Expect(result.MarketplacesAdded).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("ApplyWithSecrets", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		os.Setenv("TEST_API_KEY", "secret-value-123")
+		DeferCleanup(func() {
+			os.Unsetenv("TEST_API_KEY")
+		})
+	})
+
+	It("resolves secrets in MCP server args", func() {
+		p := &profile.Profile{
+			Name: "test",
+			MCPServers: []profile.MCPServer{
+				{
+					Name:    "secret-mcp",
+					Command: "npx",
+					Args:    []string{"-y", "package", "$TEST_API_KEY"},
+					Secrets: map[string]profile.SecretRef{
+						"TEST_API_KEY": {
+							Description: "Test API key",
+							Sources: []profile.SecretSource{
+								{Type: "env", Key: "TEST_API_KEY"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(result.MCPServersInstalled).To(HaveLen(1))
+
+		found := false
+		for _, cmd := range executor.Commands {
+			for _, arg := range cmd {
+				if arg == "secret-value-123" {
+					found = true
+					break
+				}
+			}
+		}
+		Expect(found).To(BeTrue(), "Expected resolved secret in command args. Commands: %v", executor.Commands)
+	})
+})
+
+var _ = Describe("ApplyMissingSecretFails", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("fails when secret cannot be resolved", func() {
+		p := &profile.Profile{
+			Name: "test",
+			MCPServers: []profile.MCPServer{
+				{
+					Name:    "secret-mcp",
+					Command: "npx",
+					Args:    []string{"package", "$MISSING_SECRET"},
+					Secrets: map[string]profile.SecretRef{
+						"MISSING_SECRET": {
+							Sources: []profile.SecretSource{
+								{Type: "env", Key: "MISSING_SECRET"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("ApplyCommandOrder", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		env.createPluginRegistry(map[string]interface{}{
+			"old-plugin@marketplace": map[string]interface{}{"version": "1.0"},
+		})
+	})
+
+	It("executes commands in correct order", func() {
+		p := &profile.Profile{
+			Name: "test",
+			Marketplaces: []profile.Marketplace{
+				{Source: "github", Repo: "new-marketplace"},
+			},
+			Plugins: []string{"new-plugin@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		_, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		uninstallIdx := -1
+		marketplaceIdx := -1
+		installIdx := -1
+
+		for i, cmd := range executor.Commands {
+			if len(cmd) >= 2 {
+				if cmd[0] == "plugin" && cmd[1] == "uninstall" {
+					uninstallIdx = i
+				}
+				if cmd[0] == "plugin" && cmd[1] == "marketplace" {
+					marketplaceIdx = i
+				}
+				if cmd[0] == "plugin" && cmd[1] == "install" {
+					installIdx = i
+				}
+			}
+		}
+
+		Expect(uninstallIdx).NotTo(Equal(-1))
+		Expect(marketplaceIdx).NotTo(Equal(-1))
+		Expect(installIdx).NotTo(Equal(-1))
+
+		Expect(uninstallIdx).To(BeNumerically("<", marketplaceIdx), "Expected uninstall before marketplace add")
+		Expect(marketplaceIdx).To(BeNumerically("<", installIdx), "Expected marketplace add before plugin install")
+	})
+})
+
+var _ = Describe("ApplyPluginAlreadyUninstalled", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		env.createPluginRegistry(map[string]interface{}{
+			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
+		})
+	})
+
+	It("handles already uninstalled plugins gracefully", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{},
+		}
+
+		executor := NewMockExecutor()
+		executor.Errors["plugin uninstall plugin-a@marketplace"] = fmt.Errorf("uninstall failed")
+		executor.Outputs["plugin uninstall plugin-a@marketplace"] = "Error: plugin-a@marketplace is already uninstalled"
+
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(result.PluginsAlreadyRemoved).To(HaveLen(1))
+		Expect(result.Errors).To(BeEmpty())
+	})
+})
+
+var _ = Describe("ApplyPluginAlreadyInstalled", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("handles already installed plugins gracefully", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{"plugin-a@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		executor.Errors["plugin install plugin-a@marketplace"] = fmt.Errorf("install failed")
+		executor.Outputs["plugin install plugin-a@marketplace"] = "Error: plugin-a@marketplace is already installed"
+
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(result.PluginsAlreadyPresent).To(HaveLen(1))
+		Expect(result.Errors).To(BeEmpty())
+	})
+})
+
+var _ = Describe("ApplyAllProfilePluginsAttempted", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+
+		env.createPluginRegistry(map[string]interface{}{
+			"plugin-a@marketplace": map[string]interface{}{"version": "1.0"},
+		})
+	})
+
+	It("attempts to install all profile plugins", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{"plugin-a@marketplace", "plugin-b@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(executor.HasCommand("plugin", "install", "plugin-a@marketplace")).To(BeTrue(), "Expected install attempt for plugin-a even though it's in JSON")
+		Expect(executor.HasCommand("plugin", "install", "plugin-b@marketplace")).To(BeTrue(), "Expected install attempt for plugin-b")
+		Expect(result.PluginsInstalled).To(HaveLen(2))
+	})
+})
+
+var _ = Describe("ApplyPluginInstallRealError", func() {
+	var env *applyTestEnv
+
+	BeforeEach(func() {
+		env = setupApplyTestEnv()
+	})
+
+	It("tracks real installation errors", func() {
+		p := &profile.Profile{
+			Name:    "test",
+			Plugins: []string{"plugin-a@marketplace"},
+		}
+
+		executor := NewMockExecutor()
+		executor.Errors["plugin install plugin-a@marketplace"] = fmt.Errorf("install failed")
+		executor.Outputs["plugin install plugin-a@marketplace"] = "Error: network timeout while downloading plugin"
+
+		chain := secrets.NewChain(secrets.NewEnvResolver())
+
+		result, err := profile.ApplyWithExecutor(p, env.claudeDir, env.claudeJSON, chain, executor)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(result.Errors).To(HaveLen(1))
+		Expect(result.PluginsAlreadyPresent).To(BeEmpty())
+		Expect(result.PluginsInstalled).To(BeEmpty())
+	})
+})
