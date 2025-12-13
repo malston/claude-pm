@@ -544,6 +544,42 @@ func TestRunHookNoHook(t *testing.T) {
 	}
 }
 
+func TestRunHookReturnsErrorOnFailure(t *testing.T) {
+	profile := &Profile{
+		Name: "test",
+		PostApply: &PostApplyHook{
+			Command: "exit 1", // Command that fails
+		},
+	}
+
+	err := RunHook(profile, HookOptions{})
+	if err == nil {
+		t.Error("RunHook() expected error for failing command, got nil")
+	}
+}
+
+func TestRunHookScriptFailureReturnsError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a script that fails
+	scriptPath := filepath.Join(tmpDir, "failing-setup.sh")
+	if err := os.WriteFile(scriptPath, []byte("#!/bin/bash\nexit 42\n"), 0755); err != nil {
+		t.Fatalf("Failed to create test script: %v", err)
+	}
+
+	profile := &Profile{
+		Name: "test",
+		PostApply: &PostApplyHook{
+			Script: "failing-setup.sh",
+		},
+	}
+
+	err := RunHook(profile, HookOptions{ScriptDir: tmpDir})
+	if err == nil {
+		t.Error("RunHook() expected error for failing script, got nil")
+	}
+}
+
 func TestRunHookScriptTakesPrecedenceOverCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 

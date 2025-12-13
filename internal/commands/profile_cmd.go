@@ -271,7 +271,8 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 	if profile.ShouldRunHook(p, claudeDir, claudeJSONPath, hookOpts) {
 		fmt.Println()
 		if err := profile.RunHook(p, hookOpts); err != nil {
-			fmt.Printf("  ⚠ Post-apply hook failed: %v\n", err)
+			fmt.Printf("  ✗ Post-apply hook failed: %v\n", err)
+			return fmt.Errorf("hook execution failed: %w", err)
 		}
 	}
 
