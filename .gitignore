@@ -33,7 +33,7 @@ Thumbs.db
 # Build artifacts
 /claudeup
 /claudeup-*
-docker/claudeup
+docker/claudeup*
 
 # Worktrees
 .worktrees/
