@@ -413,6 +413,10 @@ func RunHook(profile *Profile, opts HookOptions) error {
 		if opts.ScriptDir != "" && !filepath.IsAbs(scriptPath) {
 			scriptPath = filepath.Join(opts.ScriptDir, scriptPath)
 		}
+		// Verify script exists before attempting to run
+		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+			return fmt.Errorf("hook script not found: %s", scriptPath)
+		}
 		cmd = exec.Command("bash", scriptPath)
 	} else if hook.Command != "" {
 		// Direct command

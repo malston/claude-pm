@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -608,6 +609,23 @@ func TestRunHookScriptTakesPrecedenceOverCommand(t *testing.T) {
 	// Verify script ran (marker file exists)
 	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
 		t.Errorf("Script did not run - marker file not created")
+	}
+}
+
+func TestRunHookScriptNotFound(t *testing.T) {
+	profile := &Profile{
+		Name: "test",
+		PostApply: &PostApplyHook{
+			Script: "nonexistent-script.sh",
+		},
+	}
+
+	err := RunHook(profile, HookOptions{ScriptDir: t.TempDir()})
+	if err == nil {
+		t.Error("RunHook() expected error for missing script, got nil")
+	}
+	if !strings.Contains(err.Error(), "hook script not found") {
+		t.Errorf("Expected 'hook script not found' error, got: %v", err)
 	}
 }
 
