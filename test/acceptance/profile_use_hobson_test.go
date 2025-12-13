@@ -103,15 +103,24 @@ var _ = Describe("profile use hobson", func() {
 
 	Describe("wizard execution", func() {
 		BeforeEach(func() {
-			// These tests require either gum (for non-TTY handling) or a TTY for fallback mode
+			// These tests require gum for non-TTY handling
 			// In CI without gum, the fallback mode's read command fails without TTY
-			// Skip if we can't find gum - CI environments typically don't have it
-			if _, err := os.Stat("/opt/homebrew/bin/gum"); os.IsNotExist(err) {
-				if _, err := os.Stat("/usr/local/bin/gum"); os.IsNotExist(err) {
-					if _, err := os.Stat("/usr/bin/gum"); os.IsNotExist(err) {
-						Skip("gum not installed - wizard execution tests require gum for non-TTY environments")
-					}
+			// Check common gum locations including Go's bin directory
+			gumPaths := []string{
+				"/opt/homebrew/bin/gum",           // macOS homebrew (Apple Silicon)
+				"/usr/local/bin/gum",              // macOS homebrew (Intel) / Linux
+				"/usr/bin/gum",                    // System install
+				os.Getenv("HOME") + "/go/bin/gum", // go install location
+			}
+			gumFound := false
+			for _, path := range gumPaths {
+				if _, err := os.Stat(path); err == nil {
+					gumFound = true
+					break
 				}
+			}
+			if !gumFound {
+				Skip("gum not installed - wizard execution tests require gum for non-TTY environments")
 			}
 		})
 
