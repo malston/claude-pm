@@ -52,8 +52,8 @@ type MCPServer struct {
 // Marketplace represents a plugin marketplace source
 type Marketplace struct {
 	Source string `json:"source"`
-	Repo   string `json:"repo,omitempty"`
-	URL    string `json:"url,omitempty"`
+	Repo   string `json:"repo,omitempty"`   // Used for github sources
+	URL    string `json:"url,omitempty"`    // Used for git sources
 }
 
 // DisplayName returns the repo or URL for display purposes
