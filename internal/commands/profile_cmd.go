@@ -204,6 +204,26 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("profile %q not found: %w", name, err)
 	}
 
+	// Security check FIRST: warn about hooks from non-embedded profiles
+	// Users should know about hooks before seeing the diff
+	if p.PostApply != nil && !profile.IsEmbeddedProfile(name) {
+		fmt.Println()
+		fmt.Println("⚠ Security Warning: This profile contains a post-apply hook.")
+		fmt.Println("  Hooks execute arbitrary commands on your system.")
+		fmt.Println("  Only proceed if you trust the source of this profile.")
+		if p.PostApply.Script != "" {
+			fmt.Printf("  Script: %s\n", p.PostApply.Script)
+		}
+		if p.PostApply.Command != "" {
+			fmt.Printf("  Command: %s\n", p.PostApply.Command)
+		}
+		fmt.Println()
+		if !confirmProceed() {
+			fmt.Println("Cancelled.")
+			return nil
+		}
+	}
+
 	claudeDir := profile.DefaultClaudeDir()
 	claudeJSONPath := profile.DefaultClaudeJSONPath()
 
@@ -242,25 +262,6 @@ func runProfileUse(cmd *cobra.Command, args []string) error {
 
 	// Check if hook should run BEFORE applying (captures pre-apply state for first-run detection)
 	shouldRunHook := profile.ShouldRunHook(p, claudeDir, claudeJSONPath, hookOpts)
-
-	// Security check: warn about hooks from non-embedded profiles
-	if shouldRunHook && p.PostApply != nil && !profile.IsEmbeddedProfile(name) {
-		fmt.Println()
-		fmt.Println("⚠ Security Warning: This profile contains a post-apply hook.")
-		fmt.Println("  Hooks execute arbitrary commands on your system.")
-		fmt.Println("  Only proceed if you trust the source of this profile.")
-		if p.PostApply.Script != "" {
-			fmt.Printf("  Script: %s\n", p.PostApply.Script)
-		}
-		if p.PostApply.Command != "" {
-			fmt.Printf("  Command: %s\n", p.PostApply.Command)
-		}
-		fmt.Println()
-		if !confirmProceed() {
-			fmt.Println("Cancelled.")
-			return nil
-		}
-	}
 
 	// Apply
 	fmt.Println()
