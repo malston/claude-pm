@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var profileCreateFromFlag string
+
 var profileCmd = &cobra.Command{
 	Use:   "profile",
 	Short: "Manage Claude Code configuration profiles",
