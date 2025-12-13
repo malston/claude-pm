@@ -95,3 +95,44 @@ func TestLoadProfileWithFallback_PrefersDiskOverEmbedded(t *testing.T) {
 		t.Errorf("Expected custom plugins, got: %v", p.Plugins)
 	}
 }
+
+func TestPromptProfileSelection_ReturnsErrorOnEmptyInput(t *testing.T) {
+	tmpDir := t.TempDir()
+	profilesDir := filepath.Join(tmpDir, "profiles")
+	os.MkdirAll(profilesDir, 0755)
+
+	// Create a profile so selection menu has something to show
+	testProfile := &profile.Profile{
+		Name:        "test-profile",
+		Description: "Test profile",
+	}
+	if err := profile.Save(profilesDir, testProfile); err != nil {
+		t.Fatalf("Failed to save test profile: %v", err)
+	}
+
+	// Create a pipe to simulate stdin with empty input (just newline)
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+
+	// Write empty input (just Enter)
+	w.WriteString("\n")
+	w.Close()
+
+	// Swap stdin
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }()
+
+	// Call promptProfileSelection - should return error for empty input
+	_, err = promptProfileSelection(profilesDir, "new-profile")
+	if err == nil {
+		t.Error("Expected error for empty input, got nil")
+	}
+
+	expectedErr := "no selection made"
+	if err.Error() != expectedErr {
+		t.Errorf("Expected error %q, got %q", expectedErr, err.Error())
+	}
+}
