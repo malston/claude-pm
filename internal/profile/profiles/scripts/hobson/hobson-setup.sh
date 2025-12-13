@@ -224,11 +224,18 @@ enable_plugins() {
 
     for plugin in "${plugins_to_enable[@]}"; do
         local full_name="${plugin}@${MARKETPLACE}"
-        if claudeup enable "$full_name" > /dev/null 2>&1; then
+        local error_output
+        if error_output=$(claudeup enable "$full_name" 2>&1); then
             echo "  ✓ $full_name"
             ((success++))
         else
-            echo "  ✗ $full_name (failed)"
+            echo "  ✗ $full_name"
+            # Show first line of error for context
+            local first_error
+            first_error=$(echo "$error_output" | head -1)
+            if [[ -n "$first_error" ]]; then
+                echo "    → $first_error"
+            fi
             ((failed++))
         fi
     done
