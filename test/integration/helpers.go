@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"testing"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/claudeup/claudeup/internal/claude"
 	"github.com/claudeup/claudeup/internal/mcp"
@@ -15,27 +16,20 @@ import (
 // TestEnv represents a test environment with a fake Claude installation
 type TestEnv struct {
 	ClaudeDir string
-	t         *testing.T
 }
 
 // SetupTestEnv creates a temporary Claude installation for testing
-func SetupTestEnv(t *testing.T) *TestEnv {
-	t.Helper()
-
+func SetupTestEnv() *TestEnv {
 	tempDir, err := os.MkdirTemp("", "claudeup-e2e-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	env := &TestEnv{
 		ClaudeDir: tempDir,
-		t:         t,
 	}
 
 	// Create directory structure
-	if err := os.MkdirAll(filepath.Join(tempDir, "plugins"), 0755); err != nil {
-		t.Fatal(err)
-	}
+	err = os.MkdirAll(filepath.Join(tempDir, "plugins"), 0755)
+	Expect(err).NotTo(HaveOccurred())
 
 	return env
 }
@@ -47,28 +41,21 @@ func (e *TestEnv) Cleanup() {
 
 // CreateMarketplace creates a fake marketplace
 func (e *TestEnv) CreateMarketplace(name, repo string) {
-	e.t.Helper()
-
 	marketplaceDir := filepath.Join(e.ClaudeDir, "plugins", "marketplaces", name)
-	if err := os.MkdirAll(marketplaceDir, 0755); err != nil {
-		e.t.Fatal(err)
-	}
+	err := os.MkdirAll(marketplaceDir, 0755)
+	Expect(err).NotTo(HaveOccurred())
 
 	// Initialize git repo
 	gitDir := filepath.Join(marketplaceDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
-		e.t.Fatal(err)
-	}
+	err = os.MkdirAll(gitDir, 0755)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 // CreatePlugin creates a fake plugin with optional MCP servers
 func (e *TestEnv) CreatePlugin(name, marketplace, version string, mcpServers map[string]mcp.ServerDefinition) {
-	e.t.Helper()
-
 	pluginDir := filepath.Join(e.ClaudeDir, "plugins", "marketplaces", marketplace, "plugins", name)
-	if err := os.MkdirAll(filepath.Join(pluginDir, ".claude-plugin"), 0755); err != nil {
-		e.t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Join(pluginDir, ".claude-plugin"), 0755)
+	Expect(err).NotTo(HaveOccurred())
 
 	// Create plugin.json
 	pluginJSON := mcp.PluginJSON{
@@ -78,20 +65,15 @@ func (e *TestEnv) CreatePlugin(name, marketplace, version string, mcpServers map
 	}
 
 	data, err := json.MarshalIndent(pluginJSON, "", "  ")
-	if err != nil {
-		e.t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	pluginJSONPath := filepath.Join(pluginDir, ".claude-plugin", "plugin.json")
-	if err := os.WriteFile(pluginJSONPath, data, 0644); err != nil {
-		e.t.Fatal(err)
-	}
+	err = os.WriteFile(pluginJSONPath, data, 0644)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 // CreatePluginRegistry creates installed_plugins.json
 func (e *TestEnv) CreatePluginRegistry(plugins map[string]claude.PluginMetadata) {
-	e.t.Helper()
-
 	// Convert to V2 format
 	pluginsV2 := make(map[string][]claude.PluginMetadata)
 	for name, meta := range plugins {
@@ -107,64 +89,46 @@ func (e *TestEnv) CreatePluginRegistry(plugins map[string]claude.PluginMetadata)
 		Plugins: pluginsV2,
 	}
 
-	if err := claude.SavePlugins(e.ClaudeDir, registry); err != nil {
-		e.t.Fatal(err)
-	}
+	err := claude.SavePlugins(e.ClaudeDir, registry)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 // CreateMarketplaceRegistry creates known_marketplaces.json
 func (e *TestEnv) CreateMarketplaceRegistry(marketplaces map[string]claude.MarketplaceMetadata) {
-	e.t.Helper()
-
 	registry := claude.MarketplaceRegistry(marketplaces)
 
-	if err := claude.SaveMarketplaces(e.ClaudeDir, registry); err != nil {
-		e.t.Fatal(err)
-	}
+	err := claude.SaveMarketplaces(e.ClaudeDir, registry)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 // LoadPluginRegistry loads the current plugin registry
 func (e *TestEnv) LoadPluginRegistry() *claude.PluginRegistry {
-	e.t.Helper()
-
 	registry, err := claude.LoadPlugins(e.ClaudeDir)
-	if err != nil {
-		e.t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	return registry
 }
 
 // LoadMarketplaceRegistry loads the current marketplace registry
 func (e *TestEnv) LoadMarketplaceRegistry() claude.MarketplaceRegistry {
-	e.t.Helper()
-
 	registry, err := claude.LoadMarketplaces(e.ClaudeDir)
-	if err != nil {
-		e.t.Fatal(err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 	return registry
 }
 
 // PluginExists checks if a plugin exists in the registry
 func (e *TestEnv) PluginExists(name string) bool {
-	e.t.Helper()
-
 	registry := e.LoadPluginRegistry()
 	return registry.PluginExists(name)
 }
 
 // PluginCount returns the number of installed plugins
 func (e *TestEnv) PluginCount() int {
-	e.t.Helper()
-
 	registry := e.LoadPluginRegistry()
 	return len(registry.Plugins)
 }
 
 // MarketplaceCount returns the number of installed marketplaces
 func (e *TestEnv) MarketplaceCount() int {
-	e.t.Helper()
-
 	registry := e.LoadMarketplaceRegistry()
 	return len(registry)
 }
