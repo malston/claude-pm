@@ -38,6 +38,25 @@ Key decisions:
 - **New postApply field** - Triggers interactive wizard after profile is applied
 - **Condition: first-run** - Only runs if no plugins from this marketplace are enabled
 
+## First-Run Detection
+
+The wizard runs based on whether any plugins from the wshobson/agents marketplace are currently enabled:
+
+| Scenario | wshobson-agents plugins? | Wizard runs? |
+|----------|-------------------------|--------------|
+| Fresh install → hobson | None | Yes |
+| Using frontend → switch to hobson | None (different marketplace) | Yes |
+| Using hobson → re-apply hobson | Yes (from previous setup) | No (skip) |
+| Using hobson → frontend → back to hobson | None (frontend removed them) | Yes |
+
+This approach keeps the implementation simple by avoiding separate wizard-completion state tracking. Users who manually enable wshobson-agents plugins while on another profile are assumed to be power users who don't need the wizard.
+
+To force the wizard to run regardless of existing plugins, use the `--setup` flag:
+
+```bash
+claudeup profile use hobson --setup
+```
+
 ## Post-Apply Hook Mechanism
 
 claudeup requires a new feature to support profile hooks.
@@ -132,6 +151,7 @@ Setup complete! Run 'claudeup status' to see your configuration.
 - Add hook execution logic to `internal/profile/apply.go`
 - Add first-run detection (check for existing marketplace plugins)
 - Add `--no-interactive` flag to skip hooks for CI/scripting
+- Add `--setup` flag to force hook execution even if first-run detection would skip
 - Tests for new hook behavior
 
 ### 2. Hobson Profile Assets
