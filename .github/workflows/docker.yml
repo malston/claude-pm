@@ -17,6 +17,8 @@ on:
 permissions:
   contents: read
   packages: write
+  # Note: Making package public requires org admin to do it once manually via
+  # https://github.com/orgs/claudeup/packages/container/package/claudeup-sandbox/settings
 
 env:
   REGISTRY: ghcr.io
